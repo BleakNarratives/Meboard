@@ -27,6 +27,13 @@ export interface Repair {
   rule: RepairRule;
   /** Lower is more certain. Roughly: distance in key widths. */
   cost: number;
+  /**
+   * The physical slip behind the repair, when there is one: which key the
+   * thumb was aiming for and which one it actually hit. This is what feeds
+   * hit-target adaptation — the repair layer knows *why*, so the keyboard
+   * doesn't have to guess from a before/after diff.
+   */
+  pair?: { intended: string; hit: string };
 }
 
 const MAX_TOKEN = 24;
@@ -49,7 +56,12 @@ export function repairToken(raw: string): Repair | null {
       if (!/[a-z]/.test(neighbour.key)) continue;
       const attempt = neighbour.key + rest;
       if (isWord(attempt)) {
-        candidates.push({ text: attempt, rule: "punctuation", cost: neighbour.distance });
+        candidates.push({
+          text: attempt,
+          rule: "punctuation",
+          cost: neighbour.distance,
+          pair: { intended: neighbour.key, hit: mark },
+        });
       }
     }
   }
@@ -85,6 +97,7 @@ export function repairToken(raw: string): Repair | null {
             text: attempt,
             rule: "adjacent",
             cost: 1 + neighbour.distance * 0.1,
+            pair: { intended: neighbour.key, hit: token[i] },
           });
         }
       }

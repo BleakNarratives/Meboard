@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router";
-import { LayoutDashboard, LogOut, MonitorUp } from "lucide-react";
+import { Keyboard, LayoutDashboard, LogOut, MonitorUp } from "lucide-react";
 
 import logo from "@/assets/logo.svg";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 const links = [
   { to: "/dashboard", label: "Boards", icon: LayoutDashboard },
   { to: "/live", label: "Live", icon: MonitorUp },
+  { to: "/lab", label: "Lab", icon: Keyboard },
 ];
 
 export function AppNav() {

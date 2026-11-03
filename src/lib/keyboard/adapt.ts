@@ -100,3 +100,40 @@ export function recordMiss(
 function clamp(value: number): number {
   return Math.min(Math.max(value, -MAX_OFFSET), MAX_OFFSET);
 }
+
+/**
+ * Parse remembered offsets from storage. Same rule as the persona: anything
+ * user-writable is hostile input, and a corrupt notebook must degrade to a
+ * fresh one rather than take the page down mid-keystroke.
+ */
+export function parseMemory(raw: unknown): TargetMemory {
+  const memory = emptyMemory();
+  if (!isRecord(raw) || !isRecord(raw.keys)) return memory;
+
+  for (const [key, value] of Object.entries(raw.keys)) {
+    if (key.length === 0 || key.length > 4) continue;
+    if (!isRecord(value) || !isRecord(value.offset)) continue;
+
+    const dx = numberOf(value.offset.dx);
+    const dy = numberOf(value.offset.dy);
+    if (dx === null || dy === null) continue;
+
+    memory.keys[key] = {
+      offset: { dx: clamp(dx), dy: clamp(dy) },
+      strikes: Math.max(0, Math.trunc(numberOf(value.strikes) ?? 0)),
+      lastSession: Math.trunc(numberOf(value.lastSession) ?? 0),
+      movedAt: Math.trunc(numberOf(value.movedAt) ?? -COOLDOWN_SESSIONS),
+    };
+    if (Object.keys(memory.keys).length >= 40) break;
+  }
+
+  return memory;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function numberOf(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}

@@ -10,6 +10,7 @@ import {
   MAX_OFFSET,
   emptyMemory,
   offsetFor,
+  parseMemory,
   recordMiss,
 } from "./adapt";
 import { neighbours } from "./layout";
@@ -45,6 +46,16 @@ function equal<T>(name: string, actual: T, expected: T) {
   const quip = repairToken(",y");
   equal(",y becomes my", quip?.text, "my");
   equal("and by the punctuation rule", quip?.rule, "punctuation");
+}
+
+{
+  const pair = repairToken(",y")?.pair;
+  equal("the repair knows the intended key", pair?.intended, "m");
+  equal("and the key that was actually hit", pair?.hit, ",");
+
+  const slip = repairToken("gitgub")?.pair;
+  equal("adjacent slips report a pair too", slip?.intended, "h");
+  equal("transpositions do not", repairToken("teh")?.pair, undefined);
 }
 
 {
@@ -143,6 +154,34 @@ function equal<T>(name: string, actual: T, expected: T) {
   memory = recordMiss(memory, { intended: "m", hit: "m", session: 1 });
   equal("hitting the right key changes nothing", offsetFor(memory, "m").dx, 0);
   check("cooldown constant is sane", COOLDOWN_SESSIONS >= 2);
+}
+
+// --- hostile storage --------------------------------------------------------
+
+{
+  check("null memory is empty", Object.keys(parseMemory(null).keys).length === 0);
+  check(
+    "a string is not a notebook",
+    Object.keys(parseMemory("moved").keys).length === 0,
+  );
+
+  const clamped = parseMemory({ keys: { m: { offset: { dx: 99, dy: 0 } } } });
+  equal(
+    "stored offsets are clamped to the cap",
+    clamped.keys.m?.offset.dx,
+    MAX_OFFSET,
+  );
+
+  const mixed = parseMemory({
+    keys: {
+      m: { offset: { dx: 0.04, dy: 0 }, strikes: 2, lastSession: 3, movedAt: 0 },
+      evil: { offset: "left" },
+      "": { offset: { dx: 1, dy: 1 } },
+    },
+  });
+  check("valid entries survive", mixed.keys.m?.offset.dx === 0.04);
+  check("broken entries are dropped", !("evil" in mixed.keys));
+  check("empty keys are dropped", !("" in mixed.keys));
 }
 
 // --- report ----------------------------------------------------------------
