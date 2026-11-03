@@ -52,7 +52,7 @@ const limits = [
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
-  const primaryTo = "/live";
+  const primaryTo = isAuthenticated ? "/dashboard" : "/live";
   const primaryLabel = isAuthenticated ? "Open dashboard" : "Start a live board";
 
   return (
