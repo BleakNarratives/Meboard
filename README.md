@@ -1,3 +1,22 @@
+# Meboard
+
+A programmable, rewardable/punishable keyboard that grows with its user: it
+watches where typing goes wrong, nudges hit targets accordingly, predicts the
+next word from that user's own history instead of a generic corpus, and
+recommends inputs suited to the device and UI in front of them.
+
+- **Product readme** — [`README.README.md`](./README.README.md)
+- **Path to deployment** — [`ROADMAP.ROADMAP.md`](./ROADMAP.ROADMAP.md)
+- **Operator runbook (plain text)** — [`runbook.runbook.txt`](./runbook.runbook.txt)
+- **Agent/model context contract** — [`QRD.md`](./QRD.md)
+
+What ships today is one input channel: `/live`, a device's screen and text
+mirrored to another device over WebRTC, with Convex carrying only the
+handshake. The adaptive keyboard is the product; the mirror is how you see the
+errors that train it. `ROADMAP.ROADMAP.md` covers the gap.
+
+---
+
 ## Overview
 
 This project uses the following tech stack:
