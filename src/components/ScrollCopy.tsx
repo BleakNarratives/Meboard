@@ -59,11 +59,19 @@ function crawl(t: number): number {
 /**
  * Damped wobble, in pixels. Zero exactly when the crawl commits, zero again at
  * the end, so there is no seam and the word settles where static layout puts it.
+ *
+ * The amplitude is deliberately small. At 9 the rebound read as a joke rather
+ * than a settle; this is 8% under that, with the same decay and three beats, so
+ * the tail is unchanged and only the size of the bounce moves.
  */
+const SETTLE_AMPLITUDE = 8.28;
+
 function settle(t: number): number {
   const snap = clamp01((t - SNAP_START) / (1 - SNAP_START));
   if (snap === 0) return 0;
-  return Math.sin(snap * Math.PI * 3) * Math.exp(-snap * 2.6) * 9;
+  return (
+    Math.sin(snap * Math.PI * 3) * Math.exp(-snap * 2.6) * SETTLE_AMPLITUDE
+  );
 }
 
 /**
