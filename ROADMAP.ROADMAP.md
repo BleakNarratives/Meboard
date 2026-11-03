@@ -130,8 +130,11 @@ from the tablet, with the picker navigable and output readable by speech.
 
 - [ ] Separate Convex **production** deployment from dev; set `SITE_URL`,
       `JWKS`, `JWT_PRIVATE_KEY` per environment.
-- [ ] Publish the frontend through the platform's publish flow (or a static
-      host for the Vite build) with the production `VITE_CONVEX_URL`.
+- [ ] Publish the frontend: build `dist` with Vite at deploy time (`dist/` is
+      gitignored) and serve it with the repo's `main.ts` — a Hono app on Deno
+      that static-serves `/assets/*`, then `dist/*`, then falls back to
+      `index.html` for SPA routes. Point it at the production Convex
+      deployment's `VITE_CONVEX_URL` at build time.
 - [ ] Error tracking (Sentry or equivalent) on both client and Convex functions.
 - [ ] Retention: `signals` rows are transient — delete on end and on schedule.
       Decide a `rooms` retention window and document it.
