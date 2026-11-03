@@ -48,6 +48,7 @@ Rules for any agent reading this:
 | What routes exist / what is protected? | `src/main.tsx` |
 | Auth state + shape | `src/hooks/use-auth.ts`, `src/convex/users.ts` |
 | Framework conventions | `README.md` (the build-instruction file, not the product readme) |
+| Mark, palette, voice, mascot | `BRAND.BRAND.md` |
 | Plan | `ROADMAP.ROADMAP.md` |
 | Procedure | `runbook.runbook.txt` |
 | Product overview | `README.README.md` |
@@ -168,6 +169,14 @@ Mutations:
   is a serif stack (`--font-display`), body sans, mono only for micro-labels.
 - `[C]` `components/ScrollCopy.tsx` renders type twice — a stroke-only outline
   and a clipped fill driven by `crawl(t) = t^7`; reduced motion renders flat text.
+- `[C]` App mark is a pine keycap with a paper keyhole
+  (`src/assets/meboard-mark.svg`); favicon and manifest use `public/mark.svg` and
+  `public/mark-maskable.svg`. The Freebuff template logo is gone from the chrome.
+- `[C]` `components/Buffface.tsx` is the only Freebuff door: an in-house mascot
+  chip in the landing footer and app nav that opens a colophon with an optional
+  `VITE_VLY_APP_ID` project link. Buffface is **not** an official Freebuff mark.
+- `[A]` No raster assets: no PNG icons, no Open Graph card. The environment has
+  no SVG rasteriser, browser, or font stack; the SVGs are the source of truth.
 
 ### Environment / tooling
 

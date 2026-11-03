@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Meboard">
+  <title>Meboard</title>
+  <!-- A keycap with a keyhole: the board is the room, the hole is the keyboard
+       looking back. Two shapes, no gradient, legible at 16px. -->
+  <rect x="40" y="40" width="432" height="432" rx="104" fill="#17302A"/>
+  <path d="M136 40h240a96 96 0 0 1 96 96v264a36 36 0 0 1-36 36H76a36 36 0 0 1-36-36V136a96 96 0 0 1 96-96Z" fill="#24463B"/>
+  <circle cx="256" cy="196" r="64" fill="#F7F2E8"/>
+  <path d="M226 238h60l14 88a20 20 0 0 1-20 22h-48a20 20 0 0 1-20-22Z" fill="#F7F2E8"/>
+</svg>

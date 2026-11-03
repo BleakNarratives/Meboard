@@ -1,7 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router";
 import { Keyboard, LayoutDashboard, LogOut, MonitorUp } from "lucide-react";
 
-import logo from "@/assets/logo.svg";
+import mark from "@/assets/meboard-mark.svg";
+import { BufffaceBadge } from "@/components/Buffface";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -26,7 +27,7 @@ export function AppNav() {
     <aside className="flex flex-wrap items-center gap-3 border-b border-border bg-card/60 px-4 py-3 md:min-h-screen md:w-56 md:shrink-0 md:flex-col md:items-stretch md:justify-between md:border-r md:border-b-0 md:py-6">
       <div className="flex flex-1 items-center gap-4 md:flex-col md:items-stretch md:gap-6">
         <Link to="/" className="flex items-center gap-2">
-          <img src={logo} alt="" className="size-7" />
+          <img src={mark} alt="" className="size-7" />
           <span className="font-bold tracking-tight">Meboard</span>
         </Link>
         <nav className="flex flex-1 gap-1 md:flex-none md:flex-col">
@@ -56,6 +57,7 @@ export function AppNav() {
         <p className="hidden truncate text-xs text-muted-foreground md:block">
           {user?.email ?? user?.name ?? "Signed in"}
         </p>
+        <BufffaceBadge compact className="justify-start" />
         <Button
           type="button"
           variant="ghost"

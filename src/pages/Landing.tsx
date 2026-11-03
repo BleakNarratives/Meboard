@@ -11,7 +11,8 @@ import {
   Radio,
 } from "lucide-react";
 
-import logo from "@/assets/logo.svg";
+import mark from "@/assets/meboard-mark.svg";
+import { BufffaceBadge } from "@/components/Buffface";
 import { ScrollHeading, ScrollTitle, ScrollWords, SignalLine } from "@/components/ScrollCopy";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -61,7 +62,7 @@ export default function Landing() {
       <header className="sticky top-0 z-20 border-b border-border/70 bg-background/85 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="" className="size-8" />
+            <img src={mark} alt="" className="size-8" />
             <span className="font-display text-lg tracking-tight">Meboard</span>
           </Link>
           <nav className="flex items-center gap-1 sm:gap-3">
@@ -296,12 +297,15 @@ export default function Landing() {
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 sm:px-6">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="" className="size-5" />
+            <img src={mark} alt="" className="size-5" />
             <span className="font-display text-sm tracking-tight">Meboard</span>
           </div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            screen + text, device to device
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <BufffaceBadge />
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              screen + text, device to device
+            </p>
+          </div>
         </div>
       </footer>
     </div>

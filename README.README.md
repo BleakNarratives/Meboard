@@ -1,3 +1,5 @@
+<p align="center"><img src="public/mark.svg" alt="Meboard: a pine keycap with a keyhole" width="88" height="88"></p>
+
 # Meboard
 
 Put one device's screen on another, and put the text beside it.
@@ -8,7 +10,7 @@ watches it over a direct WebRTC link, and a shared text sheet underneath carries
 the things that are painful to retype blind — support codes, file paths, command
 output.
 
-- **Docs:** [ROADMAP.ROADMAP.md](./ROADMAP.ROADMAP.md) · [runbook.runbook.txt](./runbook.runbook.txt) · [QRD.md](./QRD.md)
+- **Docs:** [ROADMAP.ROADMAP.md](./ROADMAP.ROADMAP.md) · [runbook.runbook.txt](./runbook.runbook.txt) · [QRD.md](./QRD.md) · [BRAND.BRAND.md](./BRAND.BRAND.md)
 - **Build instructions for agents:** [README.md](./README.md) (framework conventions)
 
 ---
@@ -45,6 +47,14 @@ output.
 
 Both devices sign in to the same Meboard account; the board code is what ties the
 two sessions together.
+
+## Brand
+
+The keycap-and-keyhole mark, the palette, the voice rules, and the Buffface
+crossover are in `BRAND.BRAND.md`. Source assets: `src/assets/meboard-mark.svg`
+(app), `public/mark.svg` (favicon), `public/mark-maskable.svg` (PWA),
+`src/assets/buffface.svg` (mascot). There is no Freebuff logo in the app chrome;
+the one Freebuff door is the Buffface chip in the landing footer and app nav.
 
 ## Stack
 
@@ -182,6 +192,8 @@ src/
   pages/Dashboard.tsx      boards overview
   pages/Live.tsx           capture, join, watch, text channel
   components/AppNav.tsx    protected-page navigation
+  components/Buffface.tsx  the Freebuff colophon chip and dialog
+  assets/                  Meboard mark + Buffface (SVG sources)
   components/KeyboardSurface.tsx  the adaptive key surface used by /lab
   components/KeyholeBanner.tsx    persona line, polite live region + mute
   components/ScrollCopy.tsx       scroll-inked headings and body copy
