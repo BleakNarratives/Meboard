@@ -7,7 +7,14 @@
  * environment failures, a hard budget, escalation that forgives, one-shot
  * Easter eggs, and never exploding on tampered storage.
  */
+import { createPersonaBus, createSource } from "./bus";
 import { createPersona } from "./engine";
+import {
+  MAX_LINE,
+  parseVoicePack,
+  serializeVoicePack,
+  VOICE_FORMAT,
+} from "./format";
 import type { PersonaEvent, PersonaStore, Tier } from "./types";
 import { keyhole } from "./voices/keyhole";
 
@@ -206,6 +213,78 @@ function memoryStore(initial: unknown = null): PersonaStore & { value: unknown }
     }
     checks += 1;
   }
+}
+
+// --- the portable format ----------------------------------------------------
+
+{
+  const round = parseVoicePack(
+    JSON.parse(serializeVoicePack(keyhole)) as unknown,
+  );
+  check("keyhole survives a round trip", round.ok);
+
+  const withMarkup = parseVoicePack({
+    format: VOICE_FORMAT,
+    id: "troll",
+    name: "Troll",
+    lines: { "text.sent": { 1: ["<script>alert(1)</script>"] } },
+  });
+  check("markup is refused", !withMarkup.ok);
+
+  const unknownEvent = parseVoicePack({
+    format: VOICE_FORMAT,
+    id: "troll",
+    name: "Troll",
+    lines: { "user.deleted": { 1: ["hi"] } },
+  });
+  check("unknown events are refused", !unknownEvent.ok);
+
+  const badTier = parseVoicePack({
+    format: VOICE_FORMAT,
+    id: "troll",
+    name: "Troll",
+    lines: { "text.sent": { 4: ["hi"] } },
+  });
+  check("tier 4 is refused", !badTier.ok);
+
+  const noFormat = parseVoicePack({ id: "troll", name: "Troll", lines: {} });
+  check("missing format is refused", !noFormat.ok);
+
+  const shouting = parseVoicePack({
+    format: VOICE_FORMAT,
+    id: "Troll",
+    name: "Troll",
+    lines: {},
+  });
+  check("uppercase ids are refused", !shouting.ok);
+
+  const longLine = parseVoicePack({
+    format: VOICE_FORMAT,
+    id: "troll",
+    name: "Troll",
+    lines: { "text.sent": { 1: ["x".repeat(MAX_LINE + 1)] } },
+  });
+  check("overlong lines are refused", !longLine.ok);
+}
+
+// --- the bus seam -----------------------------------------------------------
+
+{
+  const { persona } = harness();
+  const heard: string[] = [];
+  const bus = createPersonaBus({ persona, onQuip: (quip) => heard.push(quip.body) });
+
+  const source = createSource();
+  const detach = bus.bridge(source);
+  source.publish({ kind: "session.started" });
+  equal("a bridged event reaches the voice", heard.length, 1);
+
+  source.publish({ kind: "session.started" });
+  equal("the budget still applies through the bridge", heard.length, 1);
+
+  detach();
+  source.publish({ kind: "viewer.joined" });
+  equal("detaching stops delivery", heard.length, 1);
 }
 
 // --- report ----------------------------------------------------------------
