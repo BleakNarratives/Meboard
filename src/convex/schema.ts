@@ -53,6 +53,28 @@ const schema = defineSchema(
       .index("by_code", ["code"])
       .index("by_host", ["hostId"]),
 
+    // capability tokens that let an external agent (a CLI, another model, a
+    // script) talk to the bus over HTTP without a browser session. a token
+    // belongs to exactly one user and is revocable by rotating it.
+    busTokens: defineTable({
+      userId: v.id("users"),
+      token: v.string(),
+      createdAt: v.number(),
+      revoked: v.optional(v.boolean()),
+    })
+      .index("by_token", ["token"])
+      .index("by_user", ["userId"]),
+
+    // the turd-merger wire: one append-only log per user, readable from the
+    // app (reactively) and from any agent that holds the token.
+    busEvents: defineTable({
+      userId: v.id("users"),
+      from: v.string(),
+      kind: v.string(),
+      body: v.string(),
+      createdAt: v.number(),
+    }).index("by_user", ["userId", "createdAt"]),
+
     // sdp handshake messages passed between the two peers
     signals: defineTable({
       roomId: v.id("rooms"),

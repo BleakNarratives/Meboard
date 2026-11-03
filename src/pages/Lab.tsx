@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Eraser, RotateCcw } from "lucide-react";
 
 import { AppNav } from "@/components/AppNav";
+import { BusPanel } from "@/components/BusPanel";
 import { KeyholeBanner } from "@/components/KeyholeBanner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -272,6 +273,8 @@ export default function Lab() {
               threshold gets earned in a lab instead of over a week.
             </p>
           </section>
+
+          <BusPanel />
         </div>
       </main>
     </div>
