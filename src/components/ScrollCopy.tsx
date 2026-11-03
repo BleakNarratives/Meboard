@@ -1,35 +1,44 @@
-import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import {
   motion,
   useReducedMotion,
   useScroll,
   useTransform,
+  type MotionStyle,
   type MotionValue,
 } from "framer-motion";
 
 /**
  * Typography that reacts to the scroll, not to a timer.
  *
- * The timing curve is the point. Three channels share one shape:
+ * Two ideas share every element:
  *
- *   crawl(t) = t^7     almost nothing happens for most of the window — at 80%
- *                      the word has covered 21% of its distance — then it
- *                      commits, hard, and covers half of what's left in the
- *                      final tenth.
- *   settle(t)          a damped wobble that starts when the crawl commits:
- *                      the boing, measured in pixels, dying out to zero.
+ * **The timing is deliberate.** `crawl(t) = t^7` means a word has covered 21%
+ * of its journey at 80% of its window. It hangs, then commits, and the last
+ * tenth covers half of what is left. `settle(t)` is the damped wobble at the
+ * end of that whip — the boing, returning to exactly zero displacement.
  *
- * Together that reads as sluggish, then whip, then wobble — the animation
- * arrives slightly before the rest of it does.
+ * **The lettering arrives in ink, not in opacity.** Every piece of type is
+ * rendered twice: an outline layer underneath (stroke only, transparent fill),
+ * and the real filled letters on top, revealed by a clip that follows the
+ * crawl. So the shape of the word is drawn first and the ink floods in after
+ * it, like the machine is catching up to a hand that already knows the word.
  *
- * Three rules keep this from becoming the thing that ruins a page:
+ * Rules that keep it from ruining the page:
  *
- *   1. **Reduced motion renders flat text.** Not a slower version — no split
- *      words, no transform, one honest paragraph.
- *   2. **Nothing ends below full opacity, and nothing ends displaced.** The
- *      finished state is exactly the static one: `crawl(1) = 1`, `settle(1) = 0`.
- *   3. **Text is never split below the word.** Letters fragment selection,
- *      translation and pronunciation, so only whole words animate.
+ *   1. **Reduced motion renders flat text.** One honest paragraph, no layers.
+ *   2. **Nothing already on screen is invisible at load.** Elements above the
+ *      fold play a one-second ink-in on mount instead of waiting for scroll.
+ *   3. **Nothing ends below full fill, and nothing ends displaced.**
+ *   4. **Text is never split below the word.** The outline twin is aria-hidden,
+ *      so a screen reader still reads one string.
  */
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
@@ -38,7 +47,7 @@ const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const SNAP_START = 0.78;
 /**
  * Higher = more distance saved for the end. At 7, a word has covered 21% of
- * its journey at 80% of its window — so 79% of the movement happens in the last
+ * its journey at 80% of its window — 79% of the movement happens in the last
  * fifth, and half of it in the last tenth.
  */
 const CRAWL_POWER = 7;
@@ -48,9 +57,8 @@ function crawl(t: number): number {
 }
 
 /**
- * Damped wobble, in pixels. Starts at zero exactly when the crawl commits, so
- * there is no visible seam, and returns to zero at the end so the word settles
- * where the static layout puts it.
+ * Damped wobble, in pixels. Zero exactly when the crawl commits, zero again at
+ * the end, so there is no seam and the word settles where static layout puts it.
  */
 function settle(t: number): number {
   const snap = clamp01((t - SNAP_START) / (1 - SNAP_START));
@@ -59,48 +67,157 @@ function settle(t: number): number {
 }
 
 /**
- * Should this element animate at all?
+ * Was this element below the fold at mount?
  *
- * The curve starts at zero, so anything already on screen when the page loads
- * would render invisible until the user scrolls — a bug, and an accessibility
- * failure. If the element is above the fold at mount, its entrance has already
- * effectively happened: render it settled. Below the fold, arm the animation.
+ * The curve starts at zero, so anything already on screen would render
+ * unfilled until the user scrolls. Above the fold we play a timed ink-in
+ * instead; below it, the scroll drives.
  */
 function useArmed(ref: RefObject<HTMLElement | null>): boolean {
-  const reduced = useReducedMotion();
   const [armed, setArmed] = useState(false);
 
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element) return;
-    const { top } = element.getBoundingClientRect();
-    setArmed(top > window.innerHeight * 0.92);
+    setArmed(element.getBoundingClientRect().top > window.innerHeight * 0.92);
   }, [ref]);
 
-  return !reduced && armed;
+  return armed;
 }
+
+/* ------------------------------------------------------------------ *
+ * Ink
+ * ------------------------------------------------------------------ */
+
+const INK_TOP = "-14%";
+
+function InkLayers({
+  children,
+  outlineStyle,
+  fillStyle,
+}: {
+  children: ReactNode;
+  outlineStyle?: MotionStyle;
+  fillStyle?: MotionStyle;
+}) {
+  return (
+    <span className="relative inline-block">
+      <motion.span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 select-none"
+        style={
+          {
+            WebkitTextFillColor: "transparent",
+            WebkitTextStroke: "1px currentColor",
+            ...outlineStyle,
+          } as MotionStyle
+        }
+      >
+        {children}
+      </motion.span>
+      <motion.span className="relative block" style={fillStyle}>
+        {children}
+      </motion.span>
+    </span>
+  );
+}
+
+/** Scroll-driven: outline appears early, ink follows the whip. */
+function InkScroll({
+  children,
+  t,
+}: {
+  children: ReactNode;
+  t: MotionValue<number>;
+}) {
+  const clipPath = useTransform(
+    t,
+    (value) =>
+      `inset(${INK_TOP} ${Math.max(0, 100 - crawl(value) * 100).toFixed(2)}% ${INK_TOP} 0)`,
+  );
+  // The outline is drawn early, holds as a guide while the ink travels, then
+  // vanishes exactly as the fill completes so no 1px halo survives at rest.
+  const outlineOpacity = useTransform(t, (value) => {
+    const guide = 0.12 + Math.min(1, value * 3) * 0.28;
+    return guide * (1 - crawl(value));
+  });
+
+  return (
+    <InkLayers
+      outlineStyle={{ opacity: outlineOpacity }}
+      fillStyle={{ clipPath }}
+    >
+      {children}
+    </InkLayers>
+  );
+}
+
+/** Above the fold: the same gesture, on a clock instead of the scrollbar. */
+function InkMount({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
+  const reduced = useReducedMotion();
+  const [drawn, setDrawn] = useState(false);
+  const [flushed, setFlushed] = useState(false);
+
+  useEffect(() => {
+    if (reduced) return;
+    const start = window.setTimeout(() => setDrawn(true), 80 + delay);
+    const settle = window.setTimeout(
+      () => setFlushed(true),
+      80 + delay + 1050,
+    );
+    return () => {
+      window.clearTimeout(start);
+      window.clearTimeout(settle);
+    };
+  }, [delay, reduced]);
+
+  if (reduced) return <>{children}</>;
+
+  return (
+    <InkLayers
+      outlineStyle={{
+        opacity: flushed ? 0 : drawn ? 0.32 : 0.08,
+        transition: "opacity 260ms linear",
+        transitionDelay: `${delay}ms`,
+      }}
+      fillStyle={{
+        clipPath: drawn
+          ? `inset(${INK_TOP} 0% ${INK_TOP} 0)`
+          : `inset(${INK_TOP} 100% ${INK_TOP} 0)`,
+        transition: "clip-path 950ms cubic-bezier(0.88, 0, 0.12, 1)",
+        transitionDelay: `${delay + 140}ms`,
+      }}
+    >
+      {children}
+    </InkLayers>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * Headings
+ * ------------------------------------------------------------------ */
 
 function useKern<T extends HTMLElement>(tightenEm: number) {
   const ref = useRef<T | null>(null);
-  const animate = useArmed(ref);
+  const reduced = useReducedMotion();
+  const armed = useArmed(ref);
+  const animate = !reduced && armed;
+
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start 0.95", "end 0.35"],
   });
 
-  // Optical spacing: generous while entering, tightened once settled, on the
-  // same sluggish-then-snap curve as the words.
   const letterSpacing = useTransform(scrollYProgress, (progress) => {
     const em = 0.06 + (tightenEm - 0.06) * crawl(progress);
     return `${em.toFixed(4)}em`;
   });
-  const opacity = useTransform(scrollYProgress, (progress) =>
-    clamp01(crawl(progress) * 1.06),
-  );
 
   return {
     ref,
-    style: animate ? { letterSpacing, opacity } : undefined,
+    animate,
+    t: scrollYProgress,
+    style: animate ? { letterSpacing } : undefined,
   };
 }
 
@@ -111,10 +228,14 @@ export function ScrollTitle({
   children: ReactNode;
   className?: string;
 }) {
-  const { ref, style } = useKern<HTMLHeadingElement>(-0.028);
+  const { ref, animate, t, style } = useKern<HTMLHeadingElement>(-0.028);
   return (
     <motion.h1 ref={ref} style={style} className={className}>
-      {children}
+      {animate ? (
+        <InkScroll t={t}>{children}</InkScroll>
+      ) : (
+        <InkMount>{children}</InkMount>
+      )}
     </motion.h1>
   );
 }
@@ -126,13 +247,21 @@ export function ScrollHeading({
   children: ReactNode;
   className?: string;
 }) {
-  const { ref, style } = useKern<HTMLHeadingElement>(-0.022);
+  const { ref, animate, t, style } = useKern<HTMLHeadingElement>(-0.022);
   return (
     <motion.h2 ref={ref} style={style} className={className}>
-      {children}
+      {animate ? (
+        <InkScroll t={t}>{children}</InkScroll>
+      ) : (
+        <InkMount>{children}</InkMount>
+      )}
     </motion.h2>
   );
 }
+
+/* ------------------------------------------------------------------ *
+ * Body copy
+ * ------------------------------------------------------------------ */
 
 export function ScrollWords({
   text,
@@ -142,13 +271,15 @@ export function ScrollWords({
   className?: string;
 }) {
   const ref = useRef<HTMLParagraphElement | null>(null);
-  const animate = useArmed(ref);
+  const reduced = useReducedMotion();
+  const armed = useArmed(ref);
+
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start 0.98", "end 0.4"],
   });
 
-  if (!animate) {
+  if (reduced) {
     return (
       <p ref={ref} className={className}>
         {text}
@@ -157,6 +288,19 @@ export function ScrollWords({
   }
 
   const words = text.split(" ");
+
+  if (!armed) {
+    return (
+      <p ref={ref} className={className}>
+        {words.map((word, index) => (
+          <span key={`${word}-${index}`} className="inline-block">
+            <InkMount delay={index * 26}>{word}</InkMount>
+            {"\u00A0"}
+          </span>
+        ))}
+      </p>
+    );
+  }
 
   return (
     <p ref={ref} className={className}>
@@ -192,9 +336,7 @@ function Word({
   const span = Math.max(0.0001, end - start);
   const local = (value: number) => clamp01((value - start) / span);
 
-  const opacity = useTransform(progress, (value) =>
-    clamp01(crawl(local(value)) * 1.06),
-  );
+  const t = useTransform(progress, local);
   const y = useTransform(
     progress,
     (value) => 22 * (1 - crawl(local(value))) - settle(local(value)),
@@ -212,19 +354,18 @@ function Word({
 
   return (
     <motion.span
-      style={{ opacity, y, scaleX, scaleY }}
+      style={{ y, scaleX, scaleY }}
       className="inline-block origin-bottom"
     >
-      {children}
+      <InkScroll t={t}>{children}</InkScroll>
       {"\u00A0"}
     </motion.span>
   );
 }
 
 /**
- * A signal line that draws itself as you descend, on the same curve: almost
- * still, then a rush into the last few percent. Pure decoration: `aria-hidden`,
- * no text inside, so it costs a screen-reader user nothing.
+ * A signal line drawn on the same curve: almost still, then a rush into the
+ * last few percent. Pure decoration: `aria-hidden`, no text inside.
  */
 export function SignalLine() {
   const ref = useRef<HTMLDivElement | null>(null);
