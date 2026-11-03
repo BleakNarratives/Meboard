@@ -26,6 +26,9 @@ context contract for any agent or model picking this up.
 | Terminal relay (read a TUI without pixels) | ❌ | Phase 3, this is the real accessibility win |
 | Android Chrome as a viewer (Tab A9, Moto G) | ⚠️ | expected to work, not yet exercised on hardware |
 | Keyboard-only host operation | ⚠️ | UI is real DOM, but the capture picker needs testing |
+| Reductive typo repair (`,y` → `my`) | ✅ library | `src/lib/keyboard/repair.ts` — rules ranked by key-width cost, 28 checks, **no keyboard UI yet** |
+| Hit targets that move, slowly | ✅ library | `src/lib/keyboard/adapt.ts` — 3 distinct sessions + 4-session cooldown, capped at 12% of a key |
+| Keyhole (the voice) | ✅ shipped on `/live` | `src/lib/persona/**` — budget, escalation, mute, three one-shot eggs, 35 checks |
 
 **Field note:** until Phase 3 lands, the working combo for the broken-screen
 Chromebook is *Chrome Remote Desktop support code (control)* + *Meboard
