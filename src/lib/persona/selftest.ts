@@ -185,6 +185,28 @@ function memoryStore(initial: unknown = null): PersonaStore & { value: unknown }
   check("repeated rejections break character", broke);
 }
 
+// --- hostile details --------------------------------------------------------
+
+{
+  const { persona, advance } = harness();
+  advance(60_000);
+  const bomb = persona.note({
+    kind: "correction.rejected",
+    pair: "x".repeat(5_000),
+  });
+  check("a huge detail is spoken, not shouted", !!bomb && bomb.body.length <= 240);
+
+  advance(60_000);
+  const spoof = persona.note({
+    kind: "correction.rejected",
+    pair: "\u202Eevil\u202C",
+  });
+  check(
+    "bidi overrides are stripped",
+    !!spoof && !/[\u202a-\u202e\u2066-\u2069]/.test(spoof.body),
+  );
+}
+
 // --- hostile storage --------------------------------------------------------
 
 {

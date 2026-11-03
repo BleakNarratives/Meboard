@@ -6,13 +6,32 @@ import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/s
 // ambiguity-free alphabet: no 0/O, 1/I/L
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
+/**
+ * A join code is a capability: whoever types it gets to see the screen. That
+ * makes it a credential, and credentials do not come from `Math.random` — the
+ * V8 generator is predictable enough that observing a few codes is a real
+ * attack, not a theoretical one.
+ *
+ * Rejection sampling keeps the distribution flat: taking `byte % 31` directly
+ * would make the first eight letters 12.5% more likely than the rest.
+ */
 function randomCode(length: number) {
+  const limit = Math.floor(256 / ALPHABET.length) * ALPHABET.length;
   let out = "";
-  for (let i = 0; i < length; i += 1) {
-    out += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+  while (out.length < length) {
+    const buffer = new Uint8Array(length);
+    crypto.getRandomValues(buffer);
+    for (const byte of buffer) {
+      if (byte >= limit) continue;
+      out += ALPHABET[byte % ALPHABET.length];
+      if (out.length === length) break;
+    }
   }
   return out;
 }
+
+/** SDP is a few kilobytes; anything past this is a storage-abuse attempt. */
+const MAX_SIGNAL_CHARS = 20_000;
 
 async function requireUserId(ctx: QueryCtx | MutationCtx) {
   const userId = await getAuthUserId(ctx);
@@ -133,14 +152,23 @@ export const createRoom = mutation({
 
     const user = await ctx.db.get(userId);
 
-    let code = randomCode(6);
-    for (let attempt = 0; attempt < 5; attempt += 1) {
+    // Never insert on a collision: two live rooms sharing a code means a
+    // viewer can attach to the wrong board, and `joinRoom` cannot tell them
+    // apart. Refusing to mint is the only safe failure.
+    let code = "";
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const candidate = randomCode(6);
       const clash = await ctx.db
         .query("rooms")
-        .withIndex("by_code", (q) => q.eq("code", code))
+        .withIndex("by_code", (q) => q.eq("code", candidate))
         .take(5);
-      if (!clash.some((room) => room.status !== "ended")) break;
-      code = randomCode(6);
+      if (!clash.some((room) => room.status !== "ended")) {
+        code = candidate;
+        break;
+      }
+    }
+    if (code === "") {
+      throw new ConvexError("Couldn't allocate a join code. Try again in a moment.");
     }
 
     const roomId = await ctx.db.insert("rooms", {
@@ -177,6 +205,15 @@ export const joinRoom = mutation({
         "That's your own board — open it on the other device.",
       );
     }
+    // One viewer per board. Without this, anyone holding the code could bump
+    // the attached viewer mid-session and take over the stream.
+    if (
+      room.status === "live" &&
+      room.viewerId !== undefined &&
+      room.viewerId !== userId
+    ) {
+      throw new ConvexError("That board already has a viewer attached.");
+    }
 
     // clear stale handshake messages before the host renegotiates
     await clearSignals(ctx, room._id);
@@ -202,6 +239,9 @@ export const postSignal = mutation({
   },
   handler: async (ctx, { roomId, kind, payload }) => {
     const userId = await requireUserId(ctx);
+    if (payload.length > MAX_SIGNAL_CHARS) {
+      throw new ConvexError("That handshake message is too large.");
+    }
     const room = await ctx.db.get(roomId);
     if (room === null || room.status === "ended") return;
 

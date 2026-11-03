@@ -32,6 +32,9 @@ const ROWS = [0, 1, 2].map((row) =>
 
 const TARGETS_KEY = "meboard.targets.v1";
 const SESSION_KEY = "meboard.lab.session";
+/** A paste bomb shouldn't be able to freeze the tab on every keystroke. */
+const MAX_TEXT = 2000;
+const MAX_TOKENS = 400;
 
 export default function Lab() {
   const [text, setText] = useState("");
@@ -45,7 +48,7 @@ export default function Lab() {
 
   const notes = useMemo(() => {
     const seen = new Map<string, Repair>();
-    for (const token of text.split(/\s+/)) {
+    for (const token of text.split(/\s+/).slice(0, MAX_TOKENS)) {
       if (!token || seen.has(token)) continue;
       const repair = repairToken(token);
       if (repair) seen.set(token, repair);
@@ -60,7 +63,14 @@ export default function Lab() {
   const typeKey = (key: string) => setText((previous) => previous + key);
 
   const takeRepair = (token: string, repair: Repair) => {
-    setText((previous) => previous.split(token).join(repair.text));
+    // Word-wise, not substring-wise: `split(token).join(...)` would also rewrite
+    // the token inside longer words and quietly corrupt the sentence.
+    setText((previous) =>
+      previous
+        .split(/(\s+)/)
+        .map((part) => (part === token ? repair.text : part))
+        .join(""),
+    );
     if (repair.pair) {
       const { intended, hit } = repair.pair;
       setMemory((previous) =>
@@ -105,7 +115,10 @@ export default function Lab() {
             <Textarea
               id="lab-input"
               value={text}
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) =>
+                setText(event.target.value.slice(0, MAX_TEXT))
+              }
+              maxLength={MAX_TEXT}
               rows={3}
               placeholder=",y keyboard is broken"
               spellCheck={false}

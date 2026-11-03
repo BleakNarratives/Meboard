@@ -47,10 +47,45 @@ function randomToken(): string {
   return [...buffer].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function clean(value: unknown, fallback: string, max: number): string {
+/**
+ * `from` and `kind` are rendered as labels. Control characters and bidi
+ * overrides let a sender make one agent's message look like another's, so the
+ * character set is a whitelist rather than a trim.
+ */
+function label(value: unknown, fallback: string, max: number): string {
   if (typeof value !== "string") return fallback;
-  const trimmed = value.trim().slice(0, max);
-  return trimmed.length > 0 ? trimmed : fallback;
+  const cleaned = value
+    .replace(/[^\w .:_-]/g, "")
+    .trim()
+    .slice(0, max);
+  return cleaned.length > 0 ? cleaned : fallback;
+}
+
+/** Bodies keep their line breaks and tabs, and nothing else invisible. */
+function sanitizeBody(value: string): string {
+  return value
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "")
+    .trim();
+}
+
+/**
+ * Retention, not a quota: an agent left in a loop must not be able to grow the
+ * table forever. Pruning is batched so a write stays cheap, and it runs on the
+ * write path so there is no cron to forget about.
+ */
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const PRUNE_BATCH = 20;
+
+async function prune(ctx: MutationCtx, userId: Id<"users">) {
+  const stale = await ctx.db
+    .query("busEvents")
+    .withIndex("by_user", (q) =>
+      q.eq("userId", userId).lt("createdAt", Date.now() - RETENTION_MS),
+    )
+    .take(PRUNE_BATCH);
+  for (const row of stale) {
+    await ctx.db.delete(row._id);
+  }
 }
 
 export const myToken = query({
@@ -116,7 +151,7 @@ export const post = mutation({
   args: { from: v.optional(v.string()), kind: v.optional(v.string()), body: v.string() },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    const body = args.body.trim();
+    const body = sanitizeBody(args.body);
     if (body.length === 0) {
       throw new ConvexError("Say something first.");
     }
@@ -126,11 +161,12 @@ export const post = mutation({
     const now = Date.now();
     await ctx.db.insert("busEvents", {
       userId,
-      from: clean(args.from, "human", MAX_FROM),
-      kind: clean(args.kind, "note", MAX_KIND),
+      from: label(args.from, "human", MAX_FROM),
+      kind: label(args.kind, "note", MAX_KIND),
       body,
       createdAt: now,
     });
+    await prune(ctx, userId);
     return { ok: true, createdAt: now };
   },
 });
@@ -187,11 +223,12 @@ export const append = internalMutation({
     const now = Date.now();
     const id = await ctx.db.insert("busEvents", {
       userId: args.userId,
-      from: args.from,
-      kind: args.kind,
-      body: args.body,
+      from: label(args.from, "external", MAX_FROM),
+      kind: label(args.kind, "note", MAX_KIND),
+      body: sanitizeBody(args.body).slice(0, MAX_BODY),
       createdAt: now,
     });
+    await prune(ctx, args.userId);
     return { id: id as string, createdAt: now };
   },
 });

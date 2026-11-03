@@ -24,14 +24,33 @@ interface AuthProps {
   redirectAfterAuth?: string;
 }
 
+/**
+ * Only same-origin absolute paths reach `navigate`.
+ *
+ * `//evil.com` is a protocol-relative URL; `/\evil.com` becomes one after a
+ * browser normalises the backslash. That second form is a long-running
+ * open-redirect bug class in routers, so it is refused here rather than
+ * trusted to the router's parsing.
+ */
 function resolveRedirectAfterAuth(
   returnTo: string | null,
   fallback = "/dashboard",
 ) {
-  if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
-    return returnTo;
+  if (!returnTo) return fallback;
+
+  const lowered = returnTo.toLowerCase();
+  if (!lowered.startsWith("/")) return fallback;
+  if (lowered.startsWith("//")) return fallback;
+  if (
+    lowered.includes("\\") ||
+    lowered.includes("%5c") ||
+    lowered.includes("%2f")
+  ) {
+    return fallback;
   }
-  return fallback;
+  if (/[\u0000-\u001f\u007f]/.test(returnTo)) return fallback;
+
+  return returnTo;
 }
 
 function Auth({ redirectAfterAuth }: AuthProps = {}) {

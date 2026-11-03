@@ -36,7 +36,7 @@ async function userIdFor(ctx: ActionCtx, request: Request) {
 
 function clean(value: unknown, fallback: string, max: number): string {
   if (typeof value !== "string") return fallback;
-  const trimmed = value.trim().slice(0, max);
+  const trimmed = value.replace(/[^\w .:_-]/g, "").trim().slice(0, max);
   return trimmed.length > 0 ? trimmed : fallback;
 }
 

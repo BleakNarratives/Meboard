@@ -246,9 +246,25 @@ function safeRandom(random: () => number): number {
   return Math.min(Math.max(value, 0), 0.999_999);
 }
 
+/**
+ * A detail is attacker-shaped: it arrives from an event, which means user text.
+ * It goes into an `aria-live` region, so an unbounded string is a way to make a
+ * screen reader read for a minute, and bidi controls are a way to make the line
+ * say something it doesn't say. Both are stripped, and the result is short.
+ */
+const MAX_DETAIL = 48;
+const MAX_LINE = 240;
+
+function sanitizeDetail(value: string): string {
+  return value
+    .replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, " ")
+    .trim()
+    .slice(0, MAX_DETAIL);
+}
+
 /** Lines are static; the only substitution is a plain string, never markup. */
 function interpolate(template: string, detail: string): string {
-  return template.split("{detail}").join(detail);
+  return template.split("{detail}").join(sanitizeDetail(detail)).slice(0, MAX_LINE);
 }
 
 function detailOf(event: PersonaEvent): string {
