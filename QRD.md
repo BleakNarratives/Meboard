@@ -75,12 +75,14 @@ running a command · `[A]` assumed / not exercised · `[P]` planned, not built.
 - `[C]` Data channel messages are JSON, exactly two shapes:
   - `{ "t": "text", "body": string }`
   - `{ "t": "ping", "x": number, "y": number }` with `x`,`y` in `0..1`.
-- `[C]` One viewer per board. A second join replaces the first.
+- `[C]` One viewer per board. A second join by a *different* user is refused
+  (`joinRoom` throws); the same viewer may rejoin, which replaces the token and
+  clears stale signals. This closed a viewer-takeover hole on 2026-11-03.
 - `[C]` No recording, no TURN, no file transfer, no input control.
 
 ### Routes
 
-- `[C]` `/` public · `/auth` public (honours `?returnTo=`) · `/dashboard` protected · `/live` protected · `*` → NotFound.
+- `[C]` `/` public · `/auth` public (honours `?returnTo=`) · `/dashboard` protected · `/live` protected · `/lab` protected · `*` → NotFound.
 - `[C]` Protection is `RequireAuth`, which redirects to `/auth?returnTo=<path>`.
 - `[C]` `Auth.tsx`'s `resolveRedirectAfterAuth` only accepts `returnTo` starting
   with `/` and not `//`, falling back to `redirectAfterAuth` (`/dashboard`).
@@ -118,6 +120,54 @@ Mutations:
 - `[C]` `signals`: `roomId`, `from` (`host|viewer`), `kind` (`offer|answer`),
   `payload` (SDP JSON string); index `by_room`.
 - `[C]` `schemaValidation: false` (deliberate, template default).
+
+### The bus (`src/convex/bus.ts`, `src/convex/http.ts`)
+
+- `[R]` `POST /bus/publish` and `GET /bus/poll?after=<ms>` are deployed on the
+  `.convex.site` host; an unauthenticated request returns `401` with a JSON
+  error body (verified by curl against the live deployment).
+- `[C]` Capability model: a signed-in user mints a token (`bus.issueToken`),
+  48 hex chars from `crypto.getRandomValues`, stored in `busTokens`.
+  `rotateToken` revokes every old token and mints one new one.
+- `[C]` `publish` needs a non-empty `body` (≤4000 chars); `from` ≤32 and `kind`
+  ≤24 are whitelisted to `[\w .:_-]`; body control characters are stripped.
+- `[C]` One append-only log per user: `feed` returns the last 40, `poll` up to
+  100 after a cursor. 7-day retention, pruned 20 rows per write.
+- `[A]` No per-user rate limit, and anonymous auth is enabled — the largest
+  remaining abuse surface. Internal functions are not client-callable.
+
+### The keyboard engine (`src/lib/keyboard/*`)
+
+- `[C]` `layout.ts` derives adjacency from QWERTY coordinates; `,` is a
+  neighbour of `m`, which is why `,y` → `my` is a rule, not a special case.
+- `[C]` `repair.ts` ranks four rules by cost in key widths: transposition 0.9,
+  punctuation 1.0, collapsed double 1.0, adjacent slip 1.0 + 0.1×distance.
+  A known word is never rewritten; no viable candidate returns `null`.
+- `[C]` `explainToken()` returns verdict, losers and reason; `bun run keyboard
+  <token>` prints it.
+- `[C]` `adapt.ts` moves a target after 3 distinct-session strikes, at most once
+  per 4 sessions, capped at 12% of a key width; reversal needs 6 strikes.
+- `[C]` `parseMemory()` treats stored offsets as hostile input and clamps them.
+- `[C]` Surface lives in `/lab` (`components/KeyboardSurface.tsx`); it offers
+  repairs and never applies them without a tap. It is **not** an Android IME and
+  cannot replace the system keyboard.
+
+### Persona (`src/lib/persona/*`)
+
+- `[C]` One engine, many voices. Packs are `persona.voice/1` data; unknown
+  events, markup and overlong lines are refused by `parseVoicePack`.
+- `[C]` Budget 45 s between lines / 6 per session; tiers 1–3; a grudge halves
+  after 10 quiet minutes; environment failures are always silent.
+- `[C]` Three one-shot sealed eggs: mute flip, marker spam, repeated rejection.
+- `[C]` `createPersonaBus({ persona, onQuip }).bridge(source)` is the integration
+  seam for any external event bus.
+
+### Design system
+
+- `[C]` Warm paper / pine ink / persimmon tokens in `src/index.css`; display type
+  is a serif stack (`--font-display`), body sans, mono only for micro-labels.
+- `[C]` `components/ScrollCopy.tsx` renders type twice — a stroke-only outline
+  and a clipped fill driven by `crawl(t) = t^7`; reduced motion renders flat text.
 
 ### Environment / tooling
 

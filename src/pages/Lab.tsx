@@ -1,55 +1,40 @@
-import { useEffect, useMemo, useState } from "react";
-import { Eraser, RotateCcw } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { RotateCcw } from "lucide-react";
 
 import { AppNav } from "@/components/AppNav";
 import { BusPanel } from "@/components/BusPanel";
+import { KeyboardSurface } from "@/components/KeyboardSurface";
 import { KeyholeBanner } from "@/components/KeyholeBanner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useKeyhole } from "@/hooks/use-keyhole";
-import {
-  MAX_OFFSET,
-  emptyMemory,
-  offsetFor,
-  parseMemory,
-  recordMiss,
-  type TargetMemory,
-} from "@/lib/keyboard/adapt";
-import { KEYS } from "@/lib/keyboard/layout";
+import { useSession, useTargetMemory } from "@/hooks/use-target-memory";
+import { MAX_OFFSET, emptyMemory, recordMiss } from "@/lib/keyboard/adapt";
 import { repairToken, type Repair } from "@/lib/keyboard/repair";
+import { replaceWord, words } from "@/lib/keyboard/text";
 
 /**
- * The lab: the keyboard's brain with the skull open.
+ * The lab: a working key surface with the skull open.
  *
- * Deliberately not a product surface. It exists so a thumb can produce the
- * evidence the engine needs, and so the claims in the roadmap can be checked
- * by someone who isn't reading TypeScript: type `,y`, see `my`, take the
- * repair, watch `m`'s target move — once — and then hold still.
+ * It exists so a thumb can produce the evidence the engine needs, and so the
+ * claims in the roadmap can be checked by someone who isn't reading TypeScript:
+ * type `,y`, see `my`, take it, watch `m`'s target move — once — then hold
+ * still. Repairs are offered, never applied.
  */
-const ROWS = [0, 1, 2].map((row) =>
-  KEYS.filter((spot) => spot.y === row).sort((a, b) => a.x - b.x),
-);
-
-const TARGETS_KEY = "meboard.targets.v1";
-const SESSION_KEY = "meboard.lab.session";
-/** A paste bomb shouldn't be able to freeze the tab on every keystroke. */
 const MAX_TEXT = 2000;
 const MAX_TOKENS = 400;
 
 export default function Lab() {
   const [text, setText] = useState("");
-  const [memory, setMemory] = useState<TargetMemory>(loadMemory);
-  const [session] = useState(nextSession);
+  const [memory, setMemory] = useTargetMemory();
+  const session = useSession();
   const { line, say, muted, toggleMute } = useKeyhole();
-
-  useEffect(() => {
-    saveMemory(memory);
-  }, [memory]);
+  const strikes = useRef(new Map<string, number>());
 
   const notes = useMemo(() => {
     const seen = new Map<string, Repair>();
-    for (const token of text.split(/\s+/).slice(0, MAX_TOKENS)) {
-      if (!token || seen.has(token)) continue;
+    for (const token of words(text).slice(0, MAX_TOKENS)) {
+      if (seen.has(token)) continue;
       const repair = repairToken(token);
       if (repair) seen.set(token, repair);
     }
@@ -60,24 +45,32 @@ export default function Lab() {
     ([, entry]) => entry.offset.dx !== 0 || entry.offset.dy !== 0,
   );
 
-  const typeKey = (key: string) => setText((previous) => previous + key);
-
-  const takeRepair = (token: string, repair: Repair) => {
-    // Word-wise, not substring-wise: `split(token).join(...)` would also rewrite
-    // the token inside longer words and quietly corrupt the sentence.
-    setText((previous) =>
-      previous
-        .split(/(\s+)/)
-        .map((part) => (part === token ? repair.text : part))
-        .join(""),
+  const noteMiss = (pair: { intended: string; hit: string }) => {
+    setMemory((previous) =>
+      recordMiss(previous, { intended: pair.intended, hit: pair.hit, session }),
     );
-    if (repair.pair) {
-      const { intended, hit } = repair.pair;
-      setMemory((previous) =>
-        recordMiss(previous, { intended, hit, session }),
-      );
+  };
+
+  /**
+   * One path for both accept buttons, so the surface and the list cannot drift:
+   * record the physical slip, then let Keyhole comment exactly once.
+   */
+  const recordAcceptance = (repair: Repair, token: string) => {
+    if (repair.pair) noteMiss(repair.pair);
+    const seen = (strikes.current.get(token) ?? 0) + 1;
+    strikes.current.set(token, seen);
+    if (seen >= 2) {
+      say({ kind: "typo.repeated", grapheme: token, count: seen });
+    } else {
+      say({ kind: "correction.accepted", pair: `${token} to ${repair.text}` });
     }
-    say({ kind: "correction.accepted", pair: `${token} to ${repair.text}` });
+  };
+
+  const takeFromList = (token: string, repair: Repair) => {
+    setText((previous) =>
+      replaceWord(previous, token, repair.text).slice(0, MAX_TEXT),
+    );
+    recordAcceptance(repair, token);
   };
 
   return (
@@ -89,91 +82,51 @@ export default function Lab() {
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-muted-foreground">
               Lab
             </p>
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="font-display text-3xl leading-tight tracking-tight sm:text-4xl">
               The keyboard, with its skull open
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Type with your real keyboard or the board below. Every word gets
-              a verdict with the rule and its cost in key widths. Nothing is
-              rewritten until you say so.
+              A real surface, not a mock: keys are hit targets, the trailing
+              word is repaired as you type, and the board remembers where your
+              thumb actually lands. Nothing is rewritten until you tap it.
             </p>
           </header>
 
           <KeyholeBanner line={line} muted={muted} onToggleMute={toggleMute} />
 
-          <div className="rounded-xl border border-border p-4">
-            <label
-              htmlFor="lab-input"
-              className="tracking-tight font-bold"
-            >
+          <section className="rounded-xl border border-border bg-card p-4">
+            <label htmlFor="lab-input" className="tracking-tight font-bold">
               Scratch
             </label>
             <p className="mt-1 mb-3 text-xs text-muted-foreground">
               Real DOM text, so it reads properly and you can select it. The
-              board appends to whatever is here.
+              board appends here; a hardware keyboard works too.
             </p>
             <Textarea
               id="lab-input"
               value={text}
-              onChange={(event) =>
-                setText(event.target.value.slice(0, MAX_TEXT))
-              }
+              onChange={(event) => setText(event.target.value.slice(0, MAX_TEXT))}
               maxLength={MAX_TEXT}
               rows={3}
               placeholder=",y keyboard is broken"
               spellCheck={false}
               autoComplete="off"
-              className="mb-3 resize-y font-mono"
+              className="mb-4 resize-y font-mono"
             />
 
-            <div className="space-y-1.5 select-none">
-              {ROWS.map((row, rowIndex) => (
-                <div
-                  key={rowIndex}
-                  className="flex justify-center gap-1 sm:gap-1.5"
-                >
-                  {row.map((spot) => {
-                    const offset = offsetFor(memory, spot.key);
-                    return (
-                      <button
-                        key={spot.key}
-                        type="button"
-                        onClick={() => typeKey(spot.key)}
-                        aria-label={`Type ${spot.key}`}
-                        style={{
-                          transform: `translate(${(offset.dx * 100).toFixed(1)}%, ${(offset.dy * 100).toFixed(1)}%)`,
-                        }}
-                        className="flex size-8 cursor-pointer items-center justify-center rounded border border-border bg-background font-mono text-sm text-foreground transition-transform duration-300 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring sm:size-10"
-                      >
-                        {spot.key}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-              <div className="flex justify-center gap-1 pt-1 sm:gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => typeKey(" ")}
-                  aria-label="Type a space"
-                  className="h-8 w-40 cursor-pointer rounded border border-border bg-background font-mono text-xs text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring sm:h-10 sm:w-56"
-                >
-                  space
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setText((previous) => previous.slice(0, -1))}
-                  aria-label="Delete the last character"
-                  className="flex h-8 w-14 cursor-pointer items-center justify-center rounded border border-border bg-background text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring sm:h-10"
-                >
-                  <Eraser className="size-4" aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-          </div>
+            <KeyboardSurface
+              value={text}
+              onChange={setText}
+              memory={memory}
+              onMiss={noteMiss}
+              onAccept={recordAcceptance}
+              onReject={(token) => say({ kind: "correction.rejected", pair: token })}
+              maxLength={MAX_TEXT}
+            />
+          </section>
 
           <section className="rounded-xl border border-border p-4">
-            <h2 className="tracking-tight font-bold">Repairs</h2>
+            <h2 className="tracking-tight font-bold">Every repair in the text</h2>
             <p
               role="status"
               aria-live="polite"
@@ -215,7 +168,7 @@ export default function Lab() {
                       <Button
                         type="button"
                         size="sm"
-                        onClick={() => takeRepair(token, repair)}
+                        onClick={() => takeFromList(token, repair)}
                         className="cursor-pointer"
                       >
                         Take it
@@ -292,34 +245,4 @@ export default function Lab() {
       </main>
     </div>
   );
-}
-
-function nextSession(): number {
-  try {
-    const previous = Number(localStorage.getItem(SESSION_KEY) ?? "0");
-    const next = Number.isFinite(previous) && previous > 0 ? Math.floor(previous) + 1 : 1;
-    localStorage.setItem(SESSION_KEY, String(next));
-    return next;
-  } catch {
-    return 1;
-  }
-}
-
-function loadMemory(): TargetMemory {
-  try {
-    const raw = localStorage.getItem(TARGETS_KEY);
-    if (!raw) return emptyMemory();
-    return parseMemory(JSON.parse(raw) as unknown);
-  } catch {
-    // A corrupt lab notebook is not worth a toast.
-    return emptyMemory();
-  }
-}
-
-function saveMemory(memory: TargetMemory) {
-  try {
-    localStorage.setItem(TARGETS_KEY, JSON.stringify(memory));
-  } catch {
-    // Storage disabled; the session still works, it just forgets.
-  }
 }

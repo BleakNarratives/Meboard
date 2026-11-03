@@ -22,6 +22,7 @@ output.
 | **Watch live** | Peer to peer over WebRTC; Convex only carries the handshake |
 | **Pass text** | Two-way data channel with real selectable text and copy buttons |
 | **Point** | Tap the video to drop a marker ring on the host's screen |
+| **Type** | `/lab` carries a working adaptive key surface: it offers repairs, learns where your thumb lands, and never rewrites without a tap |
 
 ## What it does not do
 
@@ -91,6 +92,7 @@ Screens:
 | `/auth` | public | email OTP sign-in; honours `?returnTo=` |
 | `/dashboard` | protected | board overview, entry to Live |
 | `/live` | protected | share, join, watch, text channel |
+| `/lab` | protected | adaptive key surface, repair inspector, hit-target readout, agent bus |
 
 ## How a session works
 
@@ -180,21 +182,34 @@ src/
   pages/Dashboard.tsx      boards overview
   pages/Live.tsx           capture, join, watch, text channel
   components/AppNav.tsx    protected-page navigation
+  components/KeyboardSurface.tsx  the adaptive key surface used by /lab
+  components/KeyholeBanner.tsx    persona line, polite live region + mute
+  components/ScrollCopy.tsx       scroll-inked headings and body copy
+  components/BusPanel.tsx         token, curl snippets, live agent log
   components/ui/           shadcn primitives
-  convex/schema.ts         rooms + signals + auth tables
+  convex/schema.ts         rooms + signals + bus + auth tables
   convex/live.ts           signalling queries and mutations
+  convex/bus.ts            agent bus: tokens, feed, publish, polling
+  convex/http.ts           POST /bus/publish · GET /bus/poll
   convex/users.ts          currentUser helper (read-only)
   hooks/use-auth.ts        auth state
+  hooks/use-keyhole.ts     persona instance per page
+  hooks/use-target-memory.ts  persisted hit-target offsets + session counter
+  lib/keyboard/            geometry, lexicon, repair, adaptation, spec
+  lib/persona/             engine, voice format, bus seam, Keyhole, spec
 ```
 
 ## Verification
 
 ```bash
 bunx convex dev --once && bunx tsc -b --noEmit
+bun src/lib/keyboard/selftest.ts   # 45 checks
+bun src/lib/persona/selftest.ts    # 37 checks
 ```
 
-Both must exit 0. There is no test suite yet; the manual smoke test in
-`runbook.runbook.txt` is the acceptance check.
+All four must exit 0. The two specs are executable and dependency-free; the
+manual smoke test in `runbook.runbook.txt` is still the hardware acceptance
+check, and nothing here has been run on a real device.
 
 ## Conventions
 

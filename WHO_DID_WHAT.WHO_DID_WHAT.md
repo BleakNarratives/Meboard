@@ -104,6 +104,9 @@ rather than papered over in `QRD.md` DR-1.
 | Landing, dashboard, nav | Buffy | `src/pages/{Landing,Dashboard}.tsx`, `src/components/AppNav.tsx` |
 | Theme tokens, paper grid, marker colour | Buffy | `src/index.css` |
 | Persona engine, format, bus, registry, Keyhole | Buffy | `src/lib/persona/**` |
+| Adaptive key surface, hit-target memory, repair inspector | Buffy | `src/components/KeyboardSurface.tsx`, `src/lib/keyboard/**`, `src/pages/Lab.tsx` |
+| Agent bus (capability tokens, publish/poll over HTTP) | Buffy | `src/convex/bus.ts`, `src/convex/http.ts`, `src/components/BusPanel.tsx` |
+| Warm paper palette, serif display type, scroll-ink typography | Buffy | `src/index.css`, `src/components/ScrollCopy.tsx`, `src/pages/Landing.tsx` |
 | Spec that keeps the engine honest | Buffy | `src/lib/persona/selftest.ts` (35 checks) |
 | "Keyhole" as a name | Buffy, accepted by Bleak Narratives | `src/lib/persona/voices/keyhole.ts` |
 | Everything about what this is *for* | Bleak Narratives | — |
