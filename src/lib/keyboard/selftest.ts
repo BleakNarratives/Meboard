@@ -14,7 +14,7 @@ import {
   recordMiss,
 } from "./adapt";
 import { neighbours } from "./layout";
-import { repairToken } from "./repair";
+import { explainToken, repairToken } from "./repair";
 
 const failures: string[] = [];
 let checks = 0;
@@ -80,6 +80,23 @@ function equal<T>(name: string, actual: T, expected: T) {
   equal("single letters are left alone", repairToken("a"), null);
   equal("numbers are left alone", repairToken("1234"), null);
   equal("empty input is left alone", repairToken(""), null);
+}
+
+// --- the engine can explain itself ------------------------------------------
+
+{
+  const explained = explainToken(",y");
+  equal("explain agrees with the verdict", explained.verdict?.text, "my");
+  equal("explain keeps the runner-up list", explained.considered[0]?.text, "my");
+  check("explain states why it won", explained.reason.includes("punctuation"));
+
+  const known = explainToken("my");
+  equal("explain leaves a real word alone", known.verdict, null);
+  check("explain says why", known.reason.includes("known word"));
+
+  const nonsense = explainToken("qzqz");
+  equal("explain reports nothing viable", nonsense.considered.length, 0);
+  check("explain says why not", nonsense.reason.length > 0);
 }
 
 // --- adaptation -------------------------------------------------------------

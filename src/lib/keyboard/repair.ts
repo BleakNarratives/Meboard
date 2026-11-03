@@ -38,13 +38,64 @@ export interface Repair {
 
 const MAX_TOKEN = 24;
 
-export function repairToken(raw: string): Repair | null {
-  const token = raw.trim().toLowerCase();
-  if (token.length < 2 || token.length > MAX_TOKEN) return null;
-  // A real word is never repaired. This is the guard that keeps the rest of
-  // the rules from getting creative with things you actually meant.
-  if (isWord(token)) return null;
+export interface Explanation {
+  token: string;
+  verdict: Repair | null;
+  /** Everything that was considered, best first. The audit trail. */
+  considered: Repair[];
+  /** One line a human can read: why it did, or didn't, touch the word. */
+  reason: string;
+}
 
+/**
+ * The same decision as `repairToken`, with its working shown.
+ *
+ * "The keyboard left my typo alone" is the least satisfying thing a helpful
+ * tool can do silently. This makes the silence explainable — from the lab, from
+ * a terminal, and later from a settings screen — without changing the verdict.
+ */
+export function explainToken(raw: string): Explanation {
+  const token = raw.trim().toLowerCase();
+  if (token.length === 0) {
+    return { token, verdict: null, considered: [], reason: "nothing to look at" };
+  }
+  if (token.length > MAX_TOKEN) {
+    return { token, verdict: null, considered: [], reason: "too long to be a word" };
+  }
+  if (isWord(token)) {
+    return {
+      token,
+      verdict: null,
+      considered: [],
+      reason: "known word — never rewritten",
+    };
+  }
+  if (token.length < 2) {
+    return {
+      token,
+      verdict: null,
+      considered: [],
+      reason: "single character — never rewritten",
+    };
+  }
+
+  const considered = candidatesFor(token);
+  const verdict = considered[0] ?? null;
+  return {
+    token,
+    verdict,
+    considered,
+    reason: verdict
+      ? `${verdict.rule} won at cost ${verdict.cost.toFixed(2)}`
+      : "no rule produced a known word",
+  };
+}
+
+export function repairToken(raw: string): Repair | null {
+  return explainToken(raw).verdict;
+}
+
+function candidatesFor(token: string): Repair[] {
   const candidates: Repair[] = [];
 
   // 1. A separator pressed where a letter belongs. `,` sits next to `m`, which
@@ -104,14 +155,22 @@ export function repairToken(raw: string): Repair | null {
     }
   }
 
-  if (candidates.length === 0) return null;
+  if (candidates.length === 0) return [];
 
-  candidates.sort((a, b) => {
+  // Same word can arrive from two rules; keep the cheapest explanation and
+  // drop the echo.
+  const best = new Map<string, Repair>();
+  for (const candidate of candidates) {
+    const previous = best.get(candidate.text);
+    if (!previous || candidate.cost < previous.cost) {
+      best.set(candidate.text, candidate);
+    }
+  }
+
+  return [...best.values()].sort((a, b) => {
     if (a.cost !== b.cost) return a.cost - b.cost;
     const byFrequency = rankOf(a.text) - rankOf(b.text);
     if (byFrequency !== 0) return byFrequency;
     return a.text.localeCompare(b.text);
   });
-
-  return candidates[0] ?? null;
 }
