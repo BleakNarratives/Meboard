@@ -34,10 +34,32 @@ const schema = defineSchema(
 
     // add other tables here
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    // a live screen-share board. the host captures its own screen and
+    // advertises a short join code; one viewer can attach at a time.
+    rooms: defineTable({
+      code: v.string(),
+      hostId: v.id("users"),
+      hostName: v.optional(v.string()),
+      status: v.union(
+        v.literal("waiting"),
+        v.literal("live"),
+        v.literal("ended"),
+      ),
+      viewerId: v.optional(v.id("users")),
+      viewerName: v.optional(v.string()),
+      // regenerated on every join so the host knows to renegotiate
+      viewerToken: v.optional(v.string()),
+    })
+      .index("by_code", ["code"])
+      .index("by_host", ["hostId"]),
+
+    // sdp handshake messages passed between the two peers
+    signals: defineTable({
+      roomId: v.id("rooms"),
+      from: v.union(v.literal("host"), v.literal("viewer")),
+      kind: v.union(v.literal("offer"), v.literal("answer")),
+      payload: v.string(),
+    }).index("by_room", ["roomId"]),
   },
   {
     schemaValidation: false,
