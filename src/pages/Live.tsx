@@ -15,11 +15,13 @@ import {
 import { toast } from "sonner";
 
 import { AppNav } from "@/components/AppNav";
+import { KeyholeBanner } from "@/components/KeyholeBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useKeyhole } from "@/hooks/use-keyhole";
 
 type Role = "host" | "viewer";
 type LogEntry = { id: string; mine: boolean; body: string };
@@ -85,6 +87,7 @@ export default function Live() {
   const [connected, setConnected] = useState(false);
   const [ping, setPing] = useState<Ping | null>(null);
   const [copied, setCopied] = useState(false);
+  const { line, say, muted, toggleMute } = useKeyhole();
 
   const room = useQuery(api.live.roomState, roomId ? { roomId } : "skip");
   const messages = useQuery(api.live.signals, roomId ? { roomId } : "skip");
@@ -135,17 +138,26 @@ export default function Live() {
     };
   }, []);
 
-  const watchPeer = useCallback((pc: RTCPeerConnection) => {
-    pc.onconnectionstatechange = () => {
-      setConnected(pc.connectionState === "connected");
-      if (pc.connectionState === "failed") {
-        toast.error("The two devices couldn't reach each other", {
-          description:
-            "Same Wi-Fi usually just works. Across different networks this needs a TURN relay.",
-        });
-      }
-    };
-  }, []);
+  const watchPeer = useCallback(
+    (pc: RTCPeerConnection) => {
+      let wasConnected = false;
+      pc.onconnectionstatechange = () => {
+        const nowConnected = pc.connectionState === "connected";
+        setConnected(nowConnected);
+        // Only the transition speaks. This event fires repeatedly and the
+        // persona narrating every state change would be unbearable.
+        if (nowConnected && !wasConnected) say({ kind: "viewer.joined" });
+        wasConnected = nowConnected;
+        if (pc.connectionState === "failed") {
+          toast.error("The two devices couldn't reach each other", {
+            description:
+              "Same Wi-Fi usually just works. Across different networks this needs a TURN relay.",
+          });
+        }
+      };
+    },
+    [say],
+  );
 
   const connectToViewer = useCallback(
     async (id: Id<"rooms">, stream: MediaStream) => {
@@ -218,6 +230,8 @@ export default function Live() {
       setCopied(false);
       setPing(null);
 
+      if (closeBoard) say({ kind: "session.ended", reason: "user" });
+
       if (closeBoard && previous) {
         try {
           await endRoom({ roomId: previous });
@@ -226,7 +240,7 @@ export default function Live() {
         }
       }
     },
-    [endRoom],
+    [endRoom, say],
   );
 
   // the host offers once per join, so a reloaded viewer always gets a fresh handshake
@@ -294,6 +308,7 @@ export default function Live() {
       screenRef.current = stream;
       setScreen(stream);
       setRole("host");
+      say({ kind: "session.started" });
       stream.getVideoTracks()[0]?.addEventListener("ended", () => {
         void teardown(true);
         toast("Screen sharing stopped");
@@ -361,6 +376,7 @@ export default function Live() {
     dataChannel.send(JSON.stringify({ t: "text", body }));
     setLog((prev) => [...prev, { id: uid(), mine: true, body }]);
     setDraft("");
+    say({ kind: "text.sent" });
   };
 
   const sendPing = (event: React.MouseEvent<HTMLVideoElement>) => {
@@ -374,6 +390,7 @@ export default function Live() {
         y: (event.clientY - rect.top) / rect.height,
       }),
     );
+    say({ kind: "marker.sent" });
   };
 
   const statusLabel = (() => {
@@ -409,6 +426,8 @@ export default function Live() {
               plain, selectable text — screen readers read it properly.
             </p>
           </header>
+
+          <KeyholeBanner line={line} muted={muted} onToggleMute={toggleMute} />
 
           {role === null ? (
             <motion.div
