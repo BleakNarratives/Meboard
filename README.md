@@ -9,6 +9,7 @@ recommends inputs suited to the device and UI in front of them.
 - **Path to deployment** — [`ROADMAP.ROADMAP.md`](./ROADMAP.ROADMAP.md)
 - **Operator runbook (plain text)** — [`runbook.runbook.txt`](./runbook.runbook.txt)
 - **Agent/model context contract** — [`QRD.md`](./QRD.md)
+- **Who did what (receipts)** — [`WHO_DID_WHAT.WHO_DID_WHAT.md`](./WHO_DID_WHAT.WHO_DID_WHAT.md)
 
 What ships today is one input channel: `/live`, a device's screen and text
 mirrored to another device over WebRTC, with Convex carrying only the
