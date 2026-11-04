@@ -108,12 +108,25 @@ rather than papered over in `QRD.md` DR-1.
 | Agent bus (capability tokens, publish/poll over HTTP) | Buffy | `src/convex/bus.ts`, `src/convex/http.ts`, `src/components/BusPanel.tsx` |
 | Warm paper palette, serif display type, scroll-ink typography | Buffy | `src/index.css`, `src/components/ScrollCopy.tsx`, `src/pages/Landing.tsx` |
 | Meboard mark, favicon, PWA manifest, Buffface mascot and colophon | Buffy | `src/assets/*.svg`, `public/mark*.svg`, `src/components/Buffface.tsx`, `BRAND.BRAND.md` |
+| Rail mode (compact board, same peer connection) | Buffy | `src/pages/Live.tsx`, `src/main.tsx` |
+| Rigging instructions for the A9 / Chromebook pair | Buffy | `MRD.txt` |
 | Spec that keeps the engine honest | Buffy | `src/lib/persona/selftest.ts` (35 checks) |
 | "Keyhole" as a name | Buffy, accepted by Bleak Narratives | `src/lib/persona/voices/keyhole.ts` |
 | Everything about what this is *for* | Bleak Narratives | — |
 
 Session timeline, 2026-11-03: `133959ef` 22:15:34Z → `8a03660` 22:44:00Z, the
 mirror catching up one checkpoint behind the workspace throughout.
+
+## Append, 2026-11-04 — the Rail and the rig
+
+The Rail exists as a web shell, not a system panel: `/rail` redirects into
+`Live`'s narrow layout and the header toggle switches without dropping the
+WebRTC session. No overlay, no edge handle, no IME — those are the native
+artifacts and they are not here. `MRD.txt` is the field procedure for the two
+actual devices: same Wi-Fi, same account, https preview URL, host picks
+"Entire screen", viewer types six characters, then Rail view in the same tab.
+It is written from the code, not from a successful hardware run; the checklist
+at the bottom is what a real session still has to earn.
 
 ---
 

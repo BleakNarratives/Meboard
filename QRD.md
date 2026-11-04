@@ -49,6 +49,7 @@ Rules for any agent reading this:
 | Auth state + shape | `src/hooks/use-auth.ts`, `src/convex/users.ts` |
 | Framework conventions | `README.md` (the build-instruction file, not the product readme) |
 | Mark, palette, voice, mascot | `BRAND.BRAND.md` |
+| How to rig the A9 and the Chromebook | `MRD.txt` |
 | Plan | `ROADMAP.ROADMAP.md` |
 | Procedure | `runbook.runbook.txt` |
 | Product overview | `README.README.md` |

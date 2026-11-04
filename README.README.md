@@ -10,7 +10,7 @@ watches it over a direct WebRTC link, and a shared text sheet underneath carries
 the things that are painful to retype blind — support codes, file paths, command
 output.
 
-- **Docs:** [ROADMAP.ROADMAP.md](./ROADMAP.ROADMAP.md) · [runbook.runbook.txt](./runbook.runbook.txt) · [QRD.md](./QRD.md) · [BRAND.BRAND.md](./BRAND.BRAND.md)
+- **Docs:** [ROADMAP.ROADMAP.md](./ROADMAP.ROADMAP.md) · [runbook.runbook.txt](./runbook.runbook.txt) · [QRD.md](./QRD.md) · [BRAND.BRAND.md](./BRAND.BRAND.md) · [MRD.txt](./MRD.txt)
 - **Build instructions for agents:** [README.md](./README.md) (framework conventions)
 
 ---
