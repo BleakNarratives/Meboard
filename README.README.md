@@ -103,6 +103,7 @@ Screens:
 | `/dashboard` | protected | board overview, entry to Live |
 | `/live` | protected | share, join, watch, text channel |
 | `/lab` | protected | adaptive key surface, repair inspector, hit-target readout, agent bus |
+| `/rail` | protected | compact companion view of Live (same session, narrow layout) |
 
 ## How a session works
 

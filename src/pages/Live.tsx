@@ -6,12 +6,15 @@ import {
   Check,
   Copy,
   Loader2,
+  Maximize2,
+  Minimize2,
   MonitorUp,
   Radio,
   Send,
   Square,
   WifiOff,
 } from "lucide-react";
+import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 
 import { AppNav } from "@/components/AppNav";
@@ -70,6 +73,18 @@ function waitForCandidates(pc: RTCPeerConnection) {
 export default function Live() {
   const createRoom = useMutation(api.live.createRoom);
   const joinRoom = useMutation(api.live.joinRoom);
+
+  // The Rail: the same board, squeezed into a narrow companion panel that a
+  // future Android shell can host. A query param, not a second page, so the
+  // WebRTC session survives the switch.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rail = searchParams.get("rail") === "1";
+  const setRail = (on: boolean) => {
+    const next = new URLSearchParams(searchParams);
+    if (on) next.set("rail", "1");
+    else next.delete("rail");
+    setSearchParams(next, { replace: true });
+  };
   const postSignal = useMutation(api.live.postSignal);
   const endRoom = useMutation(api.live.endRoom);
 
@@ -408,26 +423,73 @@ export default function Live() {
   })();
 
   return (
-    <div className="flex min-h-screen flex-col bg-background md:flex-row">
-      <AppNav />
-      <main className="flex-1 px-4 py-8 sm:px-8">
-        <div className="mx-auto w-full max-w-4xl space-y-6">
-          <header className="space-y-2">
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-muted-foreground">
-              Live board
-            </p>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Put this screen on that screen
-            </h1>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              One device captures its own screen and streams it peer to peer.
-              Sign in on both with the same account, start a share on the
-              broken one, enter the code here. The text channel underneath is
-              plain, selectable text — screen readers read it properly.
-            </p>
-          </header>
+    <div
+      className={
+        rail
+          ? "flex min-h-screen flex-col bg-background"
+          : "flex min-h-screen flex-col bg-background md:flex-row"
+      }
+    >
+      {!rail && <AppNav />}
+      <main className={rail ? "flex-1 px-3 py-3" : "flex-1 px-4 py-8 sm:px-8"}>
+        <div
+          className={
+            rail
+              ? "mx-auto w-full max-w-md space-y-3"
+              : "mx-auto w-full max-w-4xl space-y-6"
+          }
+        >
+          {rail ? (
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-primary">
+                Rail · compact board
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setRail(false)}
+                className="cursor-pointer gap-1.5"
+              >
+                <Maximize2 className="size-3.5" />
+                Full board
+              </Button>
+            </div>
+          ) : (
+            <header className="space-y-2">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-2">
+                  <p className="font-mono text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                    Live board
+                  </p>
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    Put this screen on that screen
+                  </h1>
+                  <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                    One device captures its own screen and streams it peer to
+                    peer. Sign in on both with the same account, start a share
+                    on the broken one, enter the code here. The text channel
+                    underneath is plain, selectable text — screen readers read
+                    it properly.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRail(true)}
+                  className="cursor-pointer gap-1.5"
+                >
+                  <Minimize2 className="size-3.5" />
+                  Rail view
+                </Button>
+              </div>
+            </header>
+          )}
 
-          <KeyholeBanner line={line} muted={muted} onToggleMute={toggleMute} />
+          {!rail && (
+            <KeyholeBanner line={line} muted={muted} onToggleMute={toggleMute} />
+          )}
 
           {role === null ? (
             <motion.div
@@ -618,7 +680,11 @@ export default function Live() {
                   role="log"
                   aria-live="polite"
                   aria-label="Shared text"
-                  className="mb-3 max-h-56 overflow-y-auto rounded-lg border border-border bg-muted/40 p-3"
+                  className={
+                    rail
+                      ? "mb-3 max-h-36 overflow-y-auto rounded-lg border border-border bg-muted/40 p-3"
+                      : "mb-3 max-h-56 overflow-y-auto rounded-lg border border-border bg-muted/40 p-3"
+                  }
                 >
                   {log.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
@@ -673,7 +739,11 @@ export default function Live() {
                   placeholder="Type or paste text to send…"
                   aria-label="Text to send"
                   disabled={!channelOpen}
-                  className="mb-2 min-h-24 font-mono text-sm"
+                  className={
+                    rail
+                      ? "mb-2 min-h-20 font-mono text-sm"
+                      : "mb-2 min-h-24 font-mono text-sm"
+                  }
                 />
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs text-muted-foreground">

@@ -83,7 +83,9 @@ running a command · `[A]` assumed / not exercised · `[P]` planned, not built.
 
 ### Routes
 
-- `[C]` `/` public · `/auth` public (honours `?returnTo=`) · `/dashboard` protected · `/live` protected · `/lab` protected · `*` → NotFound.
+- `[C]` `/` public · `/auth` public (honours `?returnTo=`) · `/dashboard` protected · `/live` protected · `/lab` protected · `/rail` protected → redirects to `/live?rail=1` · `*` → NotFound.
+- `[C]` Rail mode is a layout switch inside `Live.tsx` driven by the `rail` query
+  param, not a second page, so the peer connection survives the toggle.
 - `[C]` Protection is `RequireAuth`, which redirects to `/auth?returnTo=<path>`.
 - `[C]` `Auth.tsx`'s `resolveRedirectAfterAuth` only accepts `returnTo` starting
   with `/` and not `//`, falling back to `redirectAfterAuth` (`/dashboard`).

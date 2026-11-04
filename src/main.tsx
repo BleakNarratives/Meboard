@@ -8,7 +8,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 import "./types/global.d.ts";
 
@@ -120,6 +120,14 @@ createRoot(document.getElementById("root")!).render(
                   element={
                     <RequireAuth>
                       <Lab />
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/rail"
+                  element={
+                    <RequireAuth>
+                      <Navigate to="/live?rail=1" replace />
                     </RequireAuth>
                   }
                 />

@@ -29,6 +29,7 @@ context contract for any agent or model picking this up.
 | Reductive typo repair (`,y` → `my`) | ✅ shipped | `src/lib/keyboard/repair.ts` — rules ranked by key-width cost, `explainToken()` audit trail, 45 checks |
 | Hit targets that move, slowly | ✅ shipped | `src/lib/keyboard/adapt.ts` — 3 distinct sessions + 4-session cooldown, capped at 12% of a key |
 | Adaptive key surface | ⚠️ in `/lab` | `components/KeyboardSurface.tsx` — real hit targets and offers, but not an Android IME; cannot replace the system keyboard |
+| Rail (companion panel) | ✅ web shell | `/rail` → `/live?rail=1` — same WebRTC session in a narrow layout; no native overlay or edge handle yet |
 | Keyhole (the voice) | ✅ shipped on `/live` | `src/lib/persona/**` — budget, escalation, mute, three one-shot eggs, 35 checks |
 
 **Field note:** until Phase 3 lands, the working combo for the broken-screen
