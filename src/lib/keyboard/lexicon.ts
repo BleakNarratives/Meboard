@@ -1,3 +1,5 @@
+import { PERSONAL_LEXICON } from "./lexicon.personal";
+
 /**
  * A deliberately small lexicon, ordered by frequency.
  *
@@ -9,7 +11,7 @@
  * Order matters: earlier entries win ties, so `the` beats `teh`'s alternatives
  * and `my` beats anything a stray punctuation mark could produce.
  */
-export const LEXICON: readonly string[] = [
+const BASE_LEXICON: readonly string[] = [
   "the", "be", "to", "of", "and", "a", "in", "that", "have", "it",
   "for", "not", "on", "with", "you", "do", "at", "this", "but", "by",
   "from", "they", "we", "say", "she", "or", "an", "will", "my", "one",
@@ -27,6 +29,9 @@ export const LEXICON: readonly string[] = [
   "github", "repo", "code", "terminal", "linux", "browser", "chrome", "android", "wifi", "share",
   "sharing", "text", "copy", "paste", "password", "email", "account", "sign", "log", "host",
 ];
+
+/** Common words first, then words from the user's own code. Order is rank. */
+export const LEXICON: readonly string[] = [...BASE_LEXICON, ...PERSONAL_LEXICON];
 
 const rank = new Map<string, number>();
 LEXICON.forEach((word, index) => {

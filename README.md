@@ -300,3 +300,12 @@ A shit-talking expansive user keypad and interfacing project directory turd merg
 - `execution/front_desk_lady.py`: Autonomous SaaS package router.
 - `media_playback/termux_tts.py`: TTS audio protocol interface.
 - `keypad_ui/jerry_matrix.html`: Interactive matrix interface.
+
+## Suggestion strip (local)
+
+`modules/navigation/meboard_suggest.py` serves suggestions from the sherpa index on `127.0.0.1:8765` (localhost origins only).
+
+- `GET /suggest?q=<text>&n=5` returns ranked candidates.
+- `POST /accept {"raw": "...", "chosen": "..."}` logs the choice and any real typo.
+- `scripts/start_suggest.sh [port]` starts it, `scripts/start_suggest.sh stop` stops it.
+- `scripts/export_lexicon.py` regenerates `src/lib/keyboard/lexicon.personal.ts` from the index.
