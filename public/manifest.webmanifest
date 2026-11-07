@@ -1,0 +1,23 @@
+{
+  "name": "Meboard",
+  "short_name": "Meboard",
+  "description": "Peer-to-peer screen sharing with a keyboard that learns where your thumb lands.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F2E8",
+  "theme_color": "#24463B",
+  "icons": [
+    {
+      "src": "/mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/mark-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,199 @@
+MEBOARD RUNBOOK
+===============
+Plain-text operations + field guide. v0.1, 2026-11-03.
+Companion files: README.README.md, ROADMAP.ROADMAP.md, QRD.md
+
+
+0. SCOPE
+--------
+This runbook covers:
+  A. Running a session by hand on the broken-screen Chromebook.
+  B. Pairing Meboard with Chrome Remote Desktop for real control.
+  C. Troubleshooting a session that will not connect.
+  D. Deploy, smoke test, rollback.
+  E. Data hygiene.
+
+It assumes:
+  - Both devices are signed in to the same Meboard account.
+  - Both devices can reach the same Meboard URL in Chrome.
+  - Same Wi-Fi, unless a TURN relay is configured (it is not, in v0.1).
+
+
+1. PRE-FLIGHT
+-------------
+[ ] Chromebook plugged into AC (a sleeping host drops the session).
+[ ] Chromebook lid open; power setting does not sleep on idle.
+[ ] Meboard opened in its OWN TAB, not the embedded preview frame.
+    (Screen capture is commonly blocked inside an iframe.)
+[ ] Viewer device: Chrome, signed in, one tab on /live.
+[ ] Screen reader volume up, or headphones paired to the HOST device
+    if you need to hear its own speech output.
+
+
+2. RUNNING A SESSION (keyboard-only host)
+-----------------------------------------
+The Chromebook's panel is nearly unresponsive. Do the host side with keys.
+
+  1. Launcher key, type "Chrome", Enter.
+  2. Ctrl+L, type the Meboard URL, Enter.
+  3. Tab to "Live" in the nav, Enter.
+  4. Tab to "Share my screen", Enter.
+  5. Chrome's capture picker appears:
+       - "Entire screen" is the default; press Enter to accept.
+       - If it is not focused, Tab to it, then Enter.
+  6. A six-character code appears on screen and is announced.
+       - Read it with the screen reader, or press "Copy code" and paste it
+         into the text sheet / a Keep note to move it to the other device.
+         Nothing is transferred automatically until both devices connect.
+  7. On the viewer: /live -> type the code -> Watch.
+
+Keyboard reality check: every control in Meboard is a native button or input,
+so Tab / Shift+Tab / Enter / Space are sufficient. The only opaque point is
+Chrome's capture picker, which is a normal Chrome dialog.
+
+
+3. CHROMEVOX QUICK KEYS (host device)
+--------------------------------------
+  Ctrl+Alt+Z            toggle screen reader on/off
+  Search+R              start reading from current position
+  Search+Right/Left     next / previous item
+  Search+Down           next line
+  Search+A then B       braille captions
+  Alt+Tab               switch windows (back to the terminal)
+  Ctrl+Shift+A          terminal: select all rows (hterm)
+  Ctrl+Shift+C          terminal: copy selection
+  Ctrl+Shift+U          Chrome: read the current page from the top
+
+Reading terminal output that a TUI won't speak:
+  a. Focus the terminal, Ctrl+Shift+A, Ctrl+Shift+C.
+  b. Paste into the Meboard text sheet (Ctrl+V) or a Keep note.
+  c. Read it there -- it is real text, so speech and selection work.
+  This is also how to move output from the Chromebook to the phone.
+
+
+4. PAIRING WITH CHROME REMOTE DESKTOP (control, not viewing)
+------------------------------------------------------------
+Meboard shows; CRD controls. ChromeOS cannot host unattended CRD, so use the
+one-time support code:
+
+  Host:   remotedesktop.google.com/support -> Get Support -> Generate Code
+  Viewer: remotedesktop.google.com/support -> Give support -> enter code
+  Host:   approve the sharing dialog (Tab to Share, Enter)
+
+The code is single-use and the host re-confirms every ~30 minutes.
+Move the code between devices with Meboard's text sheet to avoid retyping it
+blind: copy on the host, paste into the sheet, copy on the phone.
+
+Stop condition: if the session drops, generate a NEW code. Codes do not replay.
+
+
+5. VIEWER DEVICE NOTES
+----------------------
+Samsung Galaxy Tab A9 (Android, Chrome)
+  - Viewer only; watch the video, use the text sheet.
+  - Tap the video to drop a marker on the host's screen.
+  - Marker position is approximate; object-fit: contain shifts the mapping
+    when aspect ratios differ. Treat it as "around here".
+
+Motorola Moto G 5G 2024 (Android, Chrome)
+  - Same viewer flow. Not yet exercised on hardware -- verify once in Phase 0.
+  - Narrow screen: the text sheet stacks under the video; the send button and
+    the log stay reachable by scrolling.
+  - If the keyboard covers the text field, dismiss it or use the log's copy
+    buttons rather than re-typing.
+
+Desktop Chrome/Chromium
+  - Can host or view. Best for verifying a broken-device session.
+
+
+6. TROUBLESHOOTING
+------------------
+Symptom: "Screen capture was blocked"
+  Cause : browser refused getDisplayMedia (iframe, or no permission).
+  Fix   : open Meboard in its own tab; retry; check site permissions.
+
+Symptom: share started, but "Waiting for someone to enter the code" never ends
+  Check : is the viewer's code exactly right (6 chars, no 0/O/1/I/L)?
+  Check : host and viewer on the same Convex deployment? (same URL)
+  Check : both signed in to the same account.
+  Fix   : viewer re-enters the code; joinRoom clears stale signals.
+
+Symptom: "Viewer attached -- connecting..." forever
+  Cause : offer/answer never completed, or ICE failed.
+  Check : browser console on both sides; look for the offer/answer posts.
+  Check : same Wi-Fi? guest-network isolation blocks peer traffic.
+  Fix   : host Stop, then start the share again; re-enter the code.
+
+Symptom: "The two devices couldn't reach each other"
+  Cause : no candidate pair. Almost always NAT/firewall isolation.
+  Fix   : put both devices on the same Wi-Fi, disable client isolation,
+          or wait for Phase 2 (TURN relay).
+
+Symptom: video is black but status says Live
+  Check : viewer <video> has a srcObject (tracks arrived?)
+  Check : host is still capturing (Chrome's "Stop sharing" bar not pressed).
+  Fix   : stop on both sides, restart the share.
+
+Symptom: text sheet says "opens on connect" and never opens
+  Cause : data channel not established; media may still work.
+  Fix   : same as the ICE failures above. The channel rides the same peer
+          connection as the video.
+
+Symptom: "That code isn't live"
+  Cause : code expired, misspelled, or the host stopped.
+  Fix   : host presses Share again for a fresh code.
+
+Symptom: "That's your own board"
+  Cause : joining your own session on the same account.
+  Fix   : use the other device.
+
+Symptom: typecheck fails after an edit
+  Run   : bunx convex dev --once   (regenerates _generated types), then
+          bunx tsc -b --noEmit
+  Never : hand-edit src/convex/_generated/*
+
+
+7. DEPLOY
+---------
+  1. bunx convex dev --once          # push functions to dev, regenerate types
+  2. bunx tsc -b --noEmit            # must exit 0
+  3. Publish through the platform's publish flow (or build the Vite bundle and
+     host it statically) against a PRODUCTION Convex deployment with its own
+     SITE_URL / JWKS / JWT_PRIVATE_KEY.
+  4. Run section 8 against production.
+
+Never start or kill the dev server manually; the platform manages it.
+
+
+8. SMOKE TEST (run after every deploy)
+--------------------------------------
+[ ] / loads, nav renders, "Start a live board" goes to /live or /auth.
+[ ] Signed out: /live redirects to /auth?returnTo=/live and returns to /live
+    after sign-in.
+[ ] Host: share screen, code appears.
+[ ] Viewer: join with code, video plays.
+[ ] Text: send a string each way, both arrive, copy works.
+[ ] Marker: tap the video, host sees the ring.
+[ ] Stop on the host: board ends, code no longer joins.
+[ ] Reload the viewer and rejoin: new handshake succeeds.
+
+
+9. DATA HYGIENE
+---------------
+  - Ending a board deletes its `signals` rows and clears viewer fields.
+  - createRoom ends any board the same host left open.
+  - v0.1 has no TTL: a host that closes the tab leaves status "live".
+    Clean up manually from the Convex dashboard if a code misbehaves:
+      rooms: patch status -> "ended"
+      signals: delete rows for that roomId
+  - Phase 1 replaces this with a heartbeat + scheduled cleanup.
+
+
+10. WHEN TO STOP AND ASK
+------------------------
+Stop and escalate rather than guessing if:
+  - The host's screen capture keeps being refused in a normal tab.
+  - Convex reports auth errors after a config change.
+  - You are about to modify auth files, _generated files, or vite config.
+  - Anyone asks for desktop control from the browser: it is not possible,
+    explain the CRD pairing instead (section 4).

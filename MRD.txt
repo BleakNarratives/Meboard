@@ -1,0 +1,164 @@
+MRD.txt
+Meboard Rigging Document
+Last verified: 2026-11-04 against the code. Not yet verified on glass.
+
+WHAT THIS IS
+The shortest reliable path to put the Chromebook's screen on the Galaxy Tab
+A9, and to type back at it from the tablet. Two devices, one Wi-Fi, one
+account, nothing to install. If a step fails, the troubleshooting block at the
+bottom names the likely cause instead of telling you to try again.
+
+
+THE 60-SECOND VERSION
+  1. Put both devices on the same Wi-Fi (not a guest network).
+  2. Open the same Meboard URL on both. Use the Freebuff preview/project URL,
+     which is https. Do not type localhost on the tablet.
+  3. Sign in with the same email on both. The sign-in code arrives by email.
+  4. Chromebook: /live -> "Share my screen" -> pick "Entire screen".
+  5. A9: /live -> type the six-character code -> "Watch".
+  6. On the A9, tap "Rail view" (same tab) for the narrow layout.
+
+That is the whole rig. Everything below is why a step might not work.
+
+
+WHAT YOU NEED
+  - HP Chromebook, Chrome updated. The broken panel is fine; capture is of the
+    framebuffer, not the glass.
+  - Samsung Galaxy Tab A9, Chrome updated.
+  - Both on the same Wi-Fi. Same account on both.
+  - The Chromebook on its charger and its sleep timer disabled (below).
+  - The project URL from Freebuff, opened as a normal top-level tab. Screen
+    capture requires https:// or localhost, and a preview iframe may refuse
+    getDisplayMedia outright.
+
+Why the same Wi-Fi: Meboard has one STUN server and no TURN relay. Same
+network means the peers find each other directly. Different networks usually
+means a black video and two confused devices, not a bug you can tap your way
+out of. Guest Wi-Fi with client isolation has the same effect.
+
+
+STEP 1 - PREP THE CHROMEBOOK SO IT DOES NOT FALL ASLEEP
+  Settings -> Device -> Power:
+    - "When idle": 30 minutes or Never (while plugged in).
+    - Keep the lid open. Closing it sleeps the machine and ends the share.
+  Keep the Meboard tab in the foreground while the A9 is watching. ChromeOS
+  throttles background tabs, and a throttled tab stops being a reliable host.
+
+  If the panel is almost gone, start the share first, then pick up the tablet.
+  The capture picker is a system dialog: Tab / arrow keys / Enter can usually
+  drive it without a working touchscreen. Meboard's own buttons are
+  keyboard-operable.
+
+
+STEP 2 - SIGN IN ON BOTH
+  Open the same URL on the Chromebook and the A9. Sign in with the same email.
+  The one-time code is emailed; open the mailbox on whichever device is easier
+  to read. A different account on the tablet will not be allowed to join the
+  board, which is the intended behaviour, not a broken code.
+
+
+STEP 3 - HOST ON THE CHROMEBOOK
+  /live -> "Share my screen".
+  In the ChromeOS picker choose "Entire screen" (not a single window, not a
+  tab) unless you specifically want to hide the rest of the desktop.
+  The board is created after the picker returns, and the six-character join
+  code appears under the local preview. Copy it with the "Copy code" button or
+  read it off the screen. The alphabet has no 0/O/1/I/L, so it is hard to
+  misread; the input uppercases what you type anyway.
+
+  If you cancel the picker, no board is created. Press Share again.
+
+
+STEP 4 - JOIN ON THE A9
+  /live -> type the code -> "Watch". The page becomes the remote screen plus
+  the shared text sheet. Expect "Viewer attached - connecting..." on the
+  Chromebook for a moment, then video.
+
+  Make it feel like an app: Chrome menu -> "Add to Home screen" -> Install.
+  The manifest gives it a standalone window and the Meboard icon. Landscape is
+  the sane orientation for a 16:9 screen.
+
+
+STEP 5 - USE THE RAIL (OPTIONAL, RECOMMENDED ON THE A9)
+  Tap "Rail view" in the Live header, or open /rail and sign in. Rail is a
+  layout switch inside the same tab, so the peer connection survives; do not
+  open /rail in a second tab while you are already the viewer, because there is
+  one viewer per board and the new tab will fight the old one.
+  What it gives you: no sidebar, no hero copy, a narrow column, a shorter text
+  log and composer. It splits well with another app on the A9.
+
+  /rail is also the URL a future native Rail host would load. There is no
+  Android overlay, bubble, or system panel yet; a web page cannot draw over
+  other apps. Split-screen is the honest version today.
+
+
+STEP 6 - PASS TEXT
+  Type or paste into the composer under the video, Ctrl+Enter (or the Send
+  button) to send. Tap the copy icon on any received line. The sheet is real
+  selectable text, not an image, so TalkBack reads it. Nothing is stored:
+  copy anything you need before you press Stop.
+
+
+THE REVERSE RIG (A9 -> Chromebook)
+  Same steps with the roles swapped: on the A9 press "Share my screen" and
+  accept Android's capture prompt, then join from the Chromebook. Useful when
+  you need the tablet's screen on the laptop, but the laptop is the device with
+  the broken panel, so the usual direction is Chromebook -> A9.
+
+
+SUCCESS CHECKLIST
+  [ ] The code is six characters and the A9 accepts it.
+  [ ] The A9 shows the Chromebook desktop, not a black rectangle.
+  [ ] Text travels in both directions and can be copied.
+  [ ] Tapping the A9 video drops a marker ring on the Chromebook screen.
+  [ ] The Rail view still shows live video after the toggle.
+
+  The marker is approximate by design. There is no cursor or keyboard control:
+  no browser can drive another machine's pointer. If you need real control, use
+  Chrome Remote Desktop; that is a different product and it is not Meboard.
+
+
+TROUBLESHOOTING
+  "This browser can't capture a screen"
+    Almost always the wrong context: an http:// LAN address, or the Freebuff
+    preview iframe. Open the https preview URL as a top-level tab.
+
+  A code, but the A9 says the board does not exist
+    The host tab was closed, or the room ended. Start the share again. Codes
+    are not reusable across sessions.
+
+  "Viewer attached - connecting..." never becomes video
+    Different networks, a VPN on either device, or guest Wi-Fi isolation.
+    Turn the VPN off, put both on the same normal Wi-Fi, reload the A9 tab,
+    then restart the share if needed.
+
+  Black video, code works
+    The picker returned a surface with nothing on it. Stop, Share again, and
+    choose "Entire screen".
+
+  Video freezes when the A9 is left alone
+    Battery saver or screen timeout. Set the A9 screen timeout longer, keep
+    Chrome unrestricted in battery settings, and keep the tab foreground.
+
+  The Chromebook slept and the A9 went black
+    Expected. The capture track dies with the machine. Wake it, reload /live,
+    start a new share; the old code is dead.
+
+  A second device cannot join
+    One viewer per board by design. Stop the existing viewer first.
+
+  No sound
+    There is no audio in the capture: getDisplayMedia is called with audio
+    false. This is a screen and text tool, not a call.
+
+
+PRIVACY, IN ONE BREATH
+  Video and the text channel are peer to peer over WebRTC with DTLS. Convex
+  stores the room code, membership and SDP payloads, not the media and not the
+  text. That is private, not secret: a compromised endpoint sees everything.
+  Sign out on a shared tablet when you are done.
+
+
+IF YOU ONLY REMEMBER ONE THING
+  Same Wi-Fi, same account, https URL, host picks "Entire screen", viewer types
+  the six characters. Everything else is polish.
