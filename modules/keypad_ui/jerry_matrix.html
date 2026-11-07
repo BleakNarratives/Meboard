@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JERRY-MATRIX // COSMIC CASINO VISUALIZER</title>
+    <style>
+        :root {
+            --bg-color: #080014;
+            --neon-gold: #ffd700;
+            --neon-pink: #ff007f;
+            --neon-cyan: #00f3ff;
+            --neon-green: #39ff14;
+            --neon-purple: #bc13fe;
+        }
+
+        body {
+            margin: 0;
+            padding: 10px;
+            background-color: var(--bg-color);
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+            border: 3px dashed var(--neon-gold);
+            padding: 10px;
+            background: rgba(255, 215, 0, 0.05);
+            box-shadow: 0 0 15px var(--neon-gold);
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            color: var(--neon-gold);
+            text-shadow: 0 0 8px var(--neon-pink), 0 0 15px var(--neon-gold);
+            margin: 0;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-around;
+            background: #120224;
+            border: 1px solid var(--neon-cyan);
+            padding: 5px;
+            font-size: 0.8rem;
+            color: var(--neon-cyan);
+            margin-bottom: 15px;
+        }
+
+        .ticker {
+            animation: blink 0.8s infinite alternate;
+            color: var(--neon-green);
+        }
+
+        @keyframes blink {
+            from { opacity: 0.4; }
+            to { opacity: 1; }
+        }
+
+        /* GRID LAYOUT FOR BUSY CASINO DASHBOARD */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .card {
+            background: #0f021e;
+            border: 2px solid var(--neon-pink);
+            box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+            padding: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.03), transparent);
+            transform: rotate(45deg);
+            pointer-events: none;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1rem;
+            color: var(--neon-cyan);
+            border-bottom: 1px solid var(--neon-cyan);
+            padding-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        /* CANVAS AREA */
+        canvas {
+            width: 100%;
+            height: 200px;
+            background: #04000a;
+            border: 1px solid var(--neon-purple);
+            display: block;
+        }
+
+        /* JACKPOT / CONTROL PANEL */
+        .casino-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            background: #240046;
+            color: var(--neon-gold);
+            border: 2px solid var(--neon-gold);
+            padding: 8px;
+            font-weight: bold;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--neon-gold);
+            transition: all 0.1s ease;
+        }
+
+        button:active {
+            transform: scale(0.95);
+            background: var(--neon-gold);
+            color: #000;
+        }
+
+        .slots {
+            display: flex;
+            justify-content: space-around;
+            background: #000;
+            border: 2px solid var(--neon-green);
+            padding: 10px;
+            font-size: 1.5rem;
+            color: var(--neon-green);
+            box-shadow: inset 0 0 10px var(--neon-green);
+        }
+
+        .log-box {
+            height: 80px;
+            overflow-y: scroll;
+            background: #000;
+            border: 1px solid var(--neon-purple);
+            padding: 5px;
+            font-size: 0.75rem;
+            color: var(--neon-green);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎰 JERRY'S REALITY MATRIX 🎰</h1>
+        <small style="color: var(--neon-cyan);">FIRMAMENT // CRATER REFLECTION // TIME DYNAMICS</small>
+    </header>
+
+    <div class="status-bar">
+        <span>STATUS: <b class="ticker">ONLINE</b></span>
+        <span>ODDS: 777-to-1</span>
+        <span>ZONE: OUTER ICE RING</span>
+    </div>
+
+    <div class="dashboard">
+        
+        <div class="card">
+            <h2>1. FIRMAMENT / LUNAR REFLECTION</h2>
+            <canvas id="radarCanvas"></canvas>
+            <div class="casino-controls">
+                <button onclick="pulseRadar()">PULSE FIRMAMENT</button>
+                <button onclick="toggleCraterMode()">TOGGLE CRATERS</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>2. REALITY SLOT MATRIX</h2>
+            <div class="slots" id="slotMachine">
+                <span id="s1">🌕</span>
+                <span id="s2">🌐</span>
+                <span id="s3">⏳</span>
+            </div>
+            <div class="casino-controls">
+                <button style="grid-column: span 2;" onclick="spinSlots()">SPIN SPACE-TIME SLOTS</button>
+            </div>
+            <p style="font-size:0.7rem; color: #aaa; margin-top:8px;">
+                Aligning Moon Reflection (🌕), UN Equidistant Map (🌐), and Time Loop (⏳).
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>3. TIME STREAM OSCILLATOR</h2>
+            <canvas id="waveCanvas"></canvas>
+            <div class="casino-controls">
+                <button onclick="boostFreq()">BOOST FREQ</button>
+                <button onclick="resetWave()">RESET TENSOR</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>4. TELEMETRY & NETWORK LOGS</h2>
+            <div class="log-box" id="logBox">
+                > System initialized...<br>
+                > Loading Godgeert Lamster crater maps...<br>
+                > Synchronizing firmament reflections...<br>
+            </div>
+            <div class="casino-controls">
+                <button style="grid-column: span 2;" onclick="addLog()">INJECT MATRIX EVENT</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. RADAR CANVAS (CRATER / FIRMAMENT) ---
+        const rCanvas = document.getElementById('radarCanvas');
+        const rCtx = rCanvas.getContext('2d');
+        rCanvas.width = rCanvas.clientWidth;
+        rCanvas.height = rCanvas.clientHeight;
+
+        let angle = 0;
+        let showCraters = true;
+
+        function drawRadar() {
+            rCtx.fillStyle = '#04000a';
+            rCtx.fillRect(0, 0, rCanvas.width, rCanvas.height);
+
+            const cx = rCanvas.width / 2;
+            const cy = rCanvas.height / 2;
+            const radius = Math.min(cx, cy) - 10;
+
+            // Outer Firmament Ring
+            rCtx.strokeStyle = '#ffd700';
+            rCtx.lineWidth = 2;
+            rCtx.beginPath();
+            rCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+            rCtx.stroke();
+
+            // Concentric Ice Rings
+            rCtx.strokeStyle = 'rgba(0, 243, 255, 0.3)';
+            rCtx.beginPath();
+            rCtx.arc(cx, cy, radius * 0.6, 0, Math.PI * 2);
+            rCtx.arc(cx, cy, radius * 0.3, 0, Math.PI * 2);
+            rCtx.stroke();
+
+            // Craters / Reflections
+            if (showCraters) {
+                rCtx.fillStyle = 'rgba(255, 0, 127, 0.6)';
+                const craters = [
+                    {x: cx + 20, y: cy - 30, r: 8},
+                    {x: cx - 40, y: cy + 10, r: 14},
+                    {x: cx + 50, y: cy + 40, r: 10},
+                    {x: cx - 10, y: cy - 50, r: 6}
+                ];
+                craters.forEach(c => {
+                    rCtx.beginPath();
+                    rCtx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+                    rCtx.fill();
+                });
+            }
+
+            // Sweeping Radar Hand
+            rCtx.strokeStyle = '#39ff14';
+            rCtx.lineWidth = 2;
+            rCtx.beginPath();
+            rCtx.moveTo(cx, cy);
+            rCtx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+            rCtx.stroke();
+
+            angle += 0.03;
+            requestAnimationFrame(drawRadar);
+        }
+        drawRadar();
+
+        function pulseRadar() {
+            log("> Firmament pulse sent: Reflection intensity elevated 150%");
+        }
+
+        function toggleCraterMode() {
+            showCraters = !showCraters;
+            log("> Crater overlays toggled: " + (showCraters ? "VISIBLE" : "HIDDEN"));
+        }
+
+        // --- 2. SLOT MACHINE LOGIC ---
+        const symbols = ['🌕', '🌐', '⏳', '👁️', '💎', '🎰', '🌌', '⚡'];
+        function spinSlots() {
+            let count = 0;
+            const interval = setInterval(() => {
+                document.getElementById('s1').innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                document.getElementById('s2').innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                document.getElementById('s3').innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                count++;
+                if (count > 12) {
+                    clearInterval(interval);
+                    log("> Slot Matrix Aligned! Quantum payout locked.");
+                }
+            }, 60);
+        }
+
+        // --- 3. WAVE OSCILLATOR ---
+        const wCanvas = document.getElementById('waveCanvas');
+        const wCtx = wCanvas.getContext('2d');
+        wCanvas.width = wCanvas.clientWidth;
+        wCanvas.height = wCanvas.clientHeight;
+
+        let step = 0;
+        let speed = 0.05;
+
+        function drawWave() {
+            wCtx.fillStyle = '#04000a';
+            wCtx.fillRect(0, 0, wCanvas.width, wCanvas.height);
+
+            wCtx.beginPath();
+            wCtx.lineWidth = 2;
+            wCtx.strokeStyle = '#00f3ff';
+
+            const height = wCanvas.height;
+            const width = wCanvas.width;
+
+            for (let x = 0; x < width; x++) {
+                const y = Math.sin(x * 0.05 + step) * 20 + Math.cos(x * 0.02 + step) * 15 + height / 2;
+                if (x === 0) wCtx.moveTo(x, y);
+                else wCtx.lineTo(x, y);
+            }
+            wCtx.stroke();
+
+            step += speed;
+            requestAnimationFrame(drawWave);
+        }
+        drawWave();
+
+        function boostFreq() {
+            speed += 0.05;
+            if (speed > 0.3) speed = 0.05;
+            log("> Time oscillator frequency: " + speed.toFixed(2));
+        }
+
+        function resetWave() {
+            speed = 0.05;
+            log("> Time oscillator reset to baseline.");
+        }
+
+        // --- LOGGING UTILITY ---
+        function log(msg) {
+            const box = document.getElementById('logBox');
+            box.innerHTML += msg + "<br>";
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function addLog() {
+            const events = [
+                "> Anomaly detected near Ice Wall sector 7",
+                "> Lunar projection sync rate: 99.4%",
+                "> Firmament glare shift logged",
+                "> Equidistant polar map overlay calibrated"
+            ];
+            log(events[Math.floor(Math.random() * events.length)]);
+        }
+    </script>
+</body>
+</html>
