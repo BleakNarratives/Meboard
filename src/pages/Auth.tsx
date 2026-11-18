@@ -48,6 +48,10 @@ function resolveRedirectAfterAuth(
   ) {
     return fallback;
   }
+  // Rejecting control characters is the point here: `returnTo` comes from a
+  // query string and is used as a redirect target, where a NUL or an escape
+  // can truncate the value a different parser sees. The check stays as written.
+  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f]/.test(returnTo)) return fallback;
 
   return returnTo;

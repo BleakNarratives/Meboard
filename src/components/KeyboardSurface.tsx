@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowBigUp, Delete } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -44,14 +44,26 @@ export function KeyboardSurface({
   maxLength = 2000,
 }: KeyboardSurfaceProps) {
   const [shift, setShift] = useState(false);
-  const dismissed = useRef(new Set<string>());
+  /**
+   * Words the user has refused, for as long as that word is the trailing one.
+   *
+   * This is state and not a ref because it is read while rendering. A ref read
+   * during render does not re-render, and it cannot be a dependency of the memo
+   * below, so `reject` used to mutate a set the memo had no reason to
+   * recompute: pressing "No" left the offer on screen until the word changed
+   * anyway, and pressing it on the last word of a line looked like a dead
+   * button.
+   */
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
 
   const current = useMemo(() => lastWord(value), [value]);
   const suggestion = useMemo(() => {
     if (current.length === 0) return null;
-    if (dismissed.current.has(current)) return null;
+    if (dismissed.has(current)) return null;
     return repairToken(current);
-  }, [current]);
+  }, [current, dismissed]);
 
   const press = (key: string) => {
     const char = shift && /[a-z]/.test(key) ? key.toUpperCase() : key;
@@ -60,7 +72,10 @@ export function KeyboardSurface({
   };
 
   const space = () => {
-    dismissed.current.clear();
+    // A new word starts here, so every refusal is forgotten. A fresh set rather
+    // than a mutation, because the previous one may still be referenced by a
+    // queued render.
+    setDismissed(new Set());
     setShift(false);
     onChange((value + " ").slice(0, maxLength));
   };
@@ -86,7 +101,11 @@ export function KeyboardSurface({
 
   const reject = () => {
     if (current.length === 0) return;
-    dismissed.current.add(current);
+    setDismissed((previous) => {
+      const next = new Set(previous);
+      next.add(current);
+      return next;
+    });
     onReject(current);
   };
 
