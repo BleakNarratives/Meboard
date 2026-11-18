@@ -65,6 +65,39 @@ const schema = defineSchema(
       .index("by_token", ["token"])
       .index("by_user", ["userId"]),
 
+    // an enrolled device: the terminal side of Latch. A device holds its own
+    // token, so revoking the laptop does not orphan the phone. There is no
+    // capability column because this build has no verbs to gate: a device can
+    // read the bus and report in, and that is the whole ceiling.
+    devices: defineTable({
+      userId: v.id("users"),
+      name: v.string(),
+      platform: v.optional(v.string()),
+      token: v.string(),
+      createdAt: v.number(),
+      // written on poll, throttled — polling is the heartbeat
+      lastSeen: v.optional(v.number()),
+      revoked: v.optional(v.boolean()),
+    })
+      .index("by_token", ["token"])
+      .index("by_user", ["userId"]),
+
+    // one-shot pairing codes: the primary way a machine enrols. Six characters
+    // from an ambiguity-free alphabet, three minutes, claimed exactly once,
+    // bound to the user who minted it. Short and typable on purpose — the whole
+    // point is that it needs no clipboard, no URL and no second device.
+    pairings: defineTable({
+      userId: v.id("users"),
+      code: v.string(),
+      name: v.string(),
+      platform: v.optional(v.string()),
+      createdAt: v.number(),
+      expiresAt: v.number(),
+      claimedAt: v.optional(v.number()),
+    })
+      .index("by_code", ["code"])
+      .index("by_user", ["userId"]),
+
     // the turd-merger wire: one append-only log per user, readable from the
     // app (reactively) and from any agent that holds the token.
     busEvents: defineTable({
@@ -72,6 +105,8 @@ const schema = defineSchema(
       from: v.string(),
       kind: v.string(),
       body: v.string(),
+      // set when a device published it, so the log can say which one
+      deviceId: v.optional(v.id("devices")),
       createdAt: v.number(),
     }).index("by_user", ["userId", "createdAt"]),
 
