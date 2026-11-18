@@ -1,0 +1,59 @@
+# One-shot: fold "QRD section 11" from its standalone file into QRD.md.
+#
+# QRD.md is ~26 kB and cannot be committed through the tooling that produced
+# this branch without truncating mid-file, and a truncated contract document is
+# worse than a split one. A runner does not have that limit, so it appends the
+# section with sed and commits the result. Runs once, on its own creation, then
+# does nothing (the guard below makes later runs a no-op).
+name: fold-qrd-11
+
+on:
+  push:
+    paths:
+      - ".github/workflows/fold-qrd.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  fold:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/latch-devices
+          fetch-depth: 0
+
+      - name: Append section 11 to QRD.md
+        run: |
+          set -euo pipefail
+
+          if ! [ -f QRD-11-Latch.md ]; then
+            echo "QRD-11-Latch.md is gone; nothing to fold."
+            exit 0
+          fi
+
+          if grep -q '^## 11\.1 Facts' QRD.md; then
+            echo "Section 11 is already in QRD.md; nothing to do."
+            exit 0
+          fi
+
+          sed -n '/^## 11\.1/,$p' QRD-11-Latch.md > /tmp/section11.md
+
+          if [ ! -s /tmp/section11.md ]; then
+            echo "Could not locate the section heading; refusing to write." >&2
+            exit 1
+          fi
+
+          {
+            printf '\n'
+            printf '## 11. Latch — device enrolment (added 2026-11-18)\n'
+            printf '\n'
+            cat /tmp/section11.md
+          } >> QRD.md
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add QRD.md
+          git commit -m 'Fold QRD section 11 into QRD.md'
+          git push origin HEAD:feat/latch-devices
