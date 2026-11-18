@@ -257,6 +257,11 @@ const MAX_LINE = 240;
 
 function sanitizeDetail(value: string): string {
   return value
+    // This expression is the safety gate described above, not an accident: it
+    // strips C0/C1 control characters and the bidi overrides that can make an
+    // aria-live line read as something it does not say. Removing the ranges
+    // would remove the guard. The rule is disabled for this one expression.
+    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, " ")
     .trim()
     .slice(0, MAX_DETAIL);
