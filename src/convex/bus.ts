@@ -1,4 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { randomCode } from "./live";
 import { ConvexError, v } from "convex/values";
 import {
   internalMutation,
@@ -64,6 +65,12 @@ function label(value: unknown, fallback: string, max: number): string {
 /** Bodies keep their line breaks and tabs, and nothing else invisible. */
 function sanitizeBody(value: string): string {
   return value
+    // Stripping control characters IS the job of this function. A body is
+    // rendered in a terminal and in an aria-live region, where a stray escape
+    // sequence or bidi override makes the text say something it does not say.
+    // Tab and newline survive; everything else invisible does not. The rule is
+    // disabled for this one expression, not for the file.
+    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "")
     .trim();
 }
@@ -146,109 +153,53 @@ export const rotateToken = mutation({
   },
 });
 
-/** Send a message from the app — the human side of the conversation. */
-export const post = mutation({
-  args: { from: v.optional(v.string()), kind: v.optional(v.string()), body: v.string() },
-  handler: async (ctx, args) => {
-    const userId = await requireUserId(ctx);
-    const body = sanitizeBody(args.body);
-    if (body.length === 0) {
-      throw new ConvexError("Say something first.");
-    }
-    if (body.length > MAX_BODY) {
-      throw new ConvexError(`Keep it under ${MAX_BODY} characters.`);
-    }
-    const now = Date.now();
-    await ctx.db.insert("busEvents", {
-      userId,
-      from: label(args.from, "human", MAX_FROM),
-      kind: label(args.kind, "note", MAX_KIND),
-      body,
-      createdAt: now,
-    });
-    await prune(ctx, userId);
-    return { ok: true, createdAt: now };
-  },
-});
+/* ------------------------------------------------------------------ *
+ * Enrolled devices — the terminal end of Latch.
+ *
+ * A device is a capability, not a session: it holds its own bearer token, it
+ * proves itself by polling, and revoking one leaves every other machine alone.
+ * That is the only reason this exists separately from `busTokens` — one token
+ * per user makes revocation all-or-nothing, which is exactly wrong when the
+ * thing you are revoking is the laptop that got stolen.
+ *
+ * What a device may do in this build: read the log, and publish plain text to
+ * it. There is no verb table, no command column and no injection path here on
+ * purpose. Escalating capability starts with adding a column, which is a
+ * decision someone has to make out loud.
+ * ------------------------------------------------------------------ */
 
-/** The last 40 events, oldest first, for the app's log. */
-export const feed = query({
+/** Eight is already more machines than one person can keep track of. */
+const MAX_DEVICES = 8;
+const MAX_DEVICE_NAME = 32;
+/** A poll every two seconds must not become a write every two seconds. */
+const TOUCH_INTERVAL_MS = 20_000;
+
+/** Only the tail is ever shown, so a list can't leak a working credential. */
+function deviceSuffix(token: string): string {
+  return token.slice(-6);
+}
+
+/** Every device this user has enrolled, newest first. Tokens stay server-side. */
+export const devices = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) return [];
+
     const rows = await ctx.db
-      .query("busEvents")
+      .query("devices")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
-      .take(40);
+      .take(MAX_DEVICES * 2);
 
-    return rows.reverse().map((row) => ({
-      id: row._id as string,
-      from: row.from,
-      kind: row.kind,
-      body: row.body,
-      createdAt: row.createdAt,
-    }));
-  },
-});
-
-/* ------------------------------------------------------------------ *
- * HTTP-facing. These are internal: an outside agent cannot call them
- * directly, only through the authenticated routes in http.ts.
- * ------------------------------------------------------------------ */
-
-export const lookupToken = internalQuery({
-  args: { token: v.string() },
-  handler: async (ctx, { token }) => {
-    // Cheap shape check before touching the database.
-    if (!/^[0-9a-f]{40,64}$/.test(token)) return null;
-    const row = await ctx.db
-      .query("busTokens")
-      .withIndex("by_token", (q) => q.eq("token", token))
-      .unique();
-    if (!row || row.revoked) return null;
-    return { userId: row.userId as Id<"users"> };
-  },
-});
-
-export const append = internalMutation({
-  args: {
-    userId: v.id("users"),
-    from: v.string(),
-    kind: v.string(),
-    body: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const now = Date.now();
-    const id = await ctx.db.insert("busEvents", {
-      userId: args.userId,
-      from: label(args.from, "external", MAX_FROM),
-      kind: label(args.kind, "note", MAX_KIND),
-      body: sanitizeBody(args.body).slice(0, MAX_BODY),
-      createdAt: now,
-    });
-    await prune(ctx, args.userId);
-    return { id: id as string, createdAt: now };
-  },
-});
-
-export const listAfter = internalQuery({
-  args: { userId: v.id("users"), after: v.number() },
-  handler: async (ctx, { userId, after }) => {
-    const rows = await ctx.db
-      .query("busEvents")
-      .withIndex("by_user", (q) =>
-        q.eq("userId", userId).gt("createdAt", after),
-      )
-      .take(MAX_POLL);
-
-    return rows.map((row) => ({
-      id: row._id as string,
-      from: row.from,
-      kind: row.kind,
-      body: row.body,
-      createdAt: row.createdAt,
+    return rows.map((device) => ({
+      id: device._id,
+      name: device.name,
+      platform: device.platform ?? null,
+      suffix: deviceSuffix(device.token),
+      createdAt: device.createdAt,
+      lastSeen: device.lastSeen ?? null,
+      revoked: device.revoked === true,
     }));
   },
 });
