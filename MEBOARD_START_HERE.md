@@ -7,8 +7,9 @@ window.
 
 **Last verified 2026-11-18** against deployment `standing-sockeye-398`
 (`bleaknarratives:meboard`). Read [What a fresh deployment needs](#what-a-fresh-deployment-needs)
-*before* your first `convex dev`, and [On Termux / Android](#on-termux--android)
-if that is where you are working. Both sections exist because both bit us.
+*before* your first `convex dev`, [On Termux / Android](#on-termux--android)
+if that is where you are working, and [Environments](#environments) for what
+has and has not been tried. All three sections exist because all three bit us.
 
 ## The thirty-second version
 
@@ -146,13 +147,34 @@ Bundling still worked on this setup (arm64 Android). If it ever does not,
 `pkg install esbuild` puts Termux's own native binary in place. Do not combine
 `--ignore-scripts` with `--no-optional`: esbuild cannot install at all with both.
 
-`npm audit` reports 10 vulnerabilities (4 moderate, 4 high, 2 critical) on a
-fresh install. None are in code this branch adds; they are the template's
-dependency tree. Do not run `npm audit fix --force` to make the number go away —
-it crosses major versions for a cosmetic result.
+`npm audit` reports 10 vulnerabilities on a fresh install. None are in code
+this branch adds; they are the template's dependency tree. Do not run
+`npm audit fix --force` to make the number go away — it crosses major versions
+for a cosmetic result.
 
-Vite on the tablet is a separate question from the CLI. If `bun run dev` will not
-serve there, that is a Termux limitation, not a project one.
+## Environments
+
+What this has actually been run on, versus what it is expected to work on. The
+CLI is one ES module on Node 18+, so "support" mostly means "somebody tried it".
+
+| Environment | State | Notes |
+|---|---|---|
+| Termux / Android, arm64 | **verified 2026-11-18** | CLI and `convex dev` both run; limits below |
+| Chromebook / Crostini | expected, not re-run since the docs changed | typed pairing codes only; `--clip` is blocked inside the container |
+| Windows | **untested** | `install-latch.ps1` has never been parsed; `--clip` is meant to work here |
+| macOS | **untested** | `--clip` is meant to work here |
+| Raspberry Pi / other arm64 Linux | **placeholder** | nothing suggests it fails; nobody has tried |
+| x86_64 Linux desktop | **placeholder** | the build and the 15 checks are the only evidence |
+
+Termux constraints, measured on this project rather than guessed:
+
+- no `bun` package, and `pkg install bunx` is not a thing — build the CLI elsewhere
+- `npm install` must run before `npx convex dev`, or esbuild cannot find `convex/server`
+- npm blocks esbuild's postinstall by policy; bundling still worked
+- Android may kill `latch listen` when Termux is backgrounded, so treat presence
+  as unreliable there rather than as a bug
+- `--clip` needs termux-api in the foreground; typing six characters is the path
+- Vite serving the web app on the tablet is untried; the CLI is the supported part
 
 ## What Latch actually does
 
