@@ -1,0 +1,38 @@
+name: append who did what
+
+# One-shot: the receipts file is 8.5 kB and should stay byte-identical, so the
+# runner appends the entry and then the scaffold is deleted in a later commit.
+
+on:
+  push:
+    paths:
+      - .github/workflows/who.yml
+
+permissions:
+  contents: write
+
+jobs:
+  append:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/latch-devices
+
+      - name: Append the entry
+        run: |
+          set -e
+          if grep -q "Append, 2026-11-18" WHO_DID_WHAT.WHO_DID_WHAT.md; then
+            echo "already appended"
+          else
+            cat .github/whodidwhat-append.txt >> WHO_DID_WHAT.WHO_DID_WHAT.md
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add WHO_DID_WHAT.WHO_DID_WHAT.md
+          if git diff --cached --quiet; then
+            echo "unchanged"
+          else
+            git commit -m "Log the 2026-11-18 session in WHO DID WHAT"
+            git push
+          fi
