@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router";
-import { Keyboard, LayoutDashboard, LogOut, MonitorUp } from "lucide-react";
+import { Keyboard, LayoutDashboard, LogOut, MonitorSmartphone, MonitorUp } from "lucide-react";
 
 import mark from "@/assets/meboard-mark.svg";
 import { BufffaceBadge } from "@/components/Buffface";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 const links = [
   { to: "/dashboard", label: "Boards", icon: LayoutDashboard },
   { to: "/live", label: "Live", icon: MonitorUp },
+  { to: "/devices", label: "Devices", icon: MonitorSmartphone },
   { to: "/lab", label: "Lab", icon: Keyboard },
 ];
 
