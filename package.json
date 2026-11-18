@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "keyboard": "bun src/lib/keyboard/inspect.ts",
+    "latch": "bun src/latch/cli.ts",
+    "latch:build": "bun scripts/build-latch.ts",
+    "latch:test": "bun run latch:build && node scripts/latch-e2e.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "preview": "vite preview"
