@@ -502,6 +502,28 @@ async function listen(flags: Flags): Promise<number> {
   }
 }
 
+/**
+ * The house rule, printed by a machine that may have nothing else left to print
+ * it on. Deliberately absent from the help text: it is not a feature, it is the
+ * promise the whole tool is built on.
+ */
+function ghost(): number {
+  console.log("latch · ghost");
+  console.log("");
+  console.log("   .--------------------------.");
+  console.log("   |                          |");
+  console.log("   |           ______         |");
+  console.log("   |                          |");
+  console.log("   `--------------------------'");
+  console.log("");
+  console.log("   the screen is dead. the wire is not.");
+  console.log("");
+  console.log("   observe only: this machine can read the wire and write text to it,");
+  console.log("   and nothing else. it cannot type, click, or run anything, including");
+  console.log("   itself. that is the promise, not a gap.");
+  return 0;
+}
+
 async function main(argv: string[]): Promise<number> {
   const { flags, rest } = parseArgs(argv);
   const command = rest[0] ?? "help";
@@ -518,6 +540,8 @@ async function main(argv: string[]): Promise<number> {
       return status(flags);
     case "listen":
       return listen(flags);
+    case "ghost":
+      return ghost();
     default:
       console.error(`latch: unknown command "${command}"`);
       console.log(HELP);
