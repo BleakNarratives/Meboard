@@ -1,0 +1,1 @@
+  -d '{"from":"gemini","kind":"note"}'`,
