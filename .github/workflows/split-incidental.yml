@@ -2,6 +2,10 @@ name: split incidental fixes
 
 # One-shot: branch fix/incidental from main and copy across only the files that
 # were riding along in #1. Deleting this file afterwards is a separate commit.
+#
+# Every line inside a run: | block must stay indented. A line at column zero
+# ends the block scalar and the whole file becomes invalid YAML, which GitHub
+# silently refuses to run.
 
 on:
   push:
@@ -26,22 +30,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B fix/incidental origin/main
-          git checkout origin/feat/latch-devices -- \
-            eslint.config.js \
-            src/components/KeyboardSurface.tsx \
-            src/hooks/use-mobile.ts \
-            src/lib/persona/engine.ts \
-            src/pages/Auth.tsx
+          git checkout origin/feat/latch-devices -- eslint.config.js src/components/KeyboardSurface.tsx src/hooks/use-mobile.ts src/lib/persona/engine.ts src/pages/Auth.tsx
           git status --short
-          git commit -m "Fix a ref read during render and the lint findings" -m "These changes were riding along with Latch in pull request 1:
-
-- KeyboardSurface.tsx: dismissed moved from a ref to state, so saying No
-  actually removed the offer.
-- engine.ts, Auth.tsx: the no-control-regex guards, kept and marked
-  deliberate.
-- use-mobile.ts: rewritten on useSyncExternalStore.
-- eslint.config.js: React Compiler rules scoped off src/components/ui/**
-  only, as an explicit allowlist.
-
-Split out so that pull request reads as Latch and nothing else."
+          git commit -m "Fix a ref read during render and the lint findings that rode along with Latch"
           git push -u origin fix/incidental
