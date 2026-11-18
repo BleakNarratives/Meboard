@@ -326,3 +326,141 @@ PRIVACY, IN ONE BREATH
 IF YOU ONLY REMEMBER ONE THING
   Build it, get a six-character code from /devices, type it on the machine
   within three minutes, then confirm "auth ok". Everything else is polish.
+
+===============================================================================
+WHEN THE OTP KEY IS MISSING  (added 2026-11-18)
+===============================================================================
+
+WHAT THIS IS
+  Email sign-in sends a six-digit code through the freebuff integrations
+  gateway. The gateway needs to know which project is asking, and it knows
+  that by one variable on the deployment: VLY_INTEGRATION_KEY. Without that
+  variable no code can be sent. Nothing is broken and nothing is lost; the one
+  sign-in path that needs an email is simply closed.
+
+  This is the normal state of a deployment created with plain `npx convex dev`.
+  The key is issued when a project is created through freebuff's own flow, not
+  when you run the CLI by hand. Expect it to be missing, and expect the app to
+  say so rather than failing quietly.
+
+WHAT YOU SEE
+  In the app, after asking for a code:
+      Email sign-in is not configured on this deployment: VLY_INTEGRATION_KEY
+      is unset, so no sign-in code can be sent. Set it with `npx convex env set
+      VLY_INTEGRATION_KEY <key>`, or sign in as a guest instead - the bus,
+      /devices and Latch all work without email sign-in.
+
+  From the terminal, the same situation:
+      npx convex env list          # no VLY_INTEGRATION_KEY in the list
+
+  What you do NOT see any more: a bare HTTP 401 from the gateway, or an email
+  that never arrives while the page insists it was sent. The check happens
+  before a socket is opened, because a request that cannot succeed should not
+  be made.
+
+  It is still an error and not a quiet return, on purpose. Convex Auth reports
+  a successful send if the send function resolves, so returning normally would
+  make the UI lie and leave somebody waiting on an email that was never going
+  to come. A clear refusal is the honest failure.
+
+THREE WAYS FORWARD, IN ORDER OF EFFORT
+  1. Do not sign in with email. Guest sign-in is the Anonymous provider in
+     src/convex/auth.ts and is always available. The bus, /devices, pairing,
+     enrolment and Latch all work. For a demo this is the right answer.
+
+  2. Get a key and set it:
+       npx convex env set VLY_INTEGRATION_KEY <key>
+     Reload and ask for a code again. No redeploy needed; Convex picks up env
+     changes on the next request. Treat the key like a password: not in
+     .env.local, not in a commit, not pasted into a chat window.
+
+  3. Point the sender somewhere else, if you run your own gateway:
+       npx convex env set VLY_INTEGRATION_BASE_URL https://your.host
+     It defaults to https://integrations.vly.ai and expects POST
+     /v1/email/otp with {to, otp} and an Authorization: Bearer header.
+
+WHAT THIS DOES NOT BREAK
+  - Latch enrolment, tokens, revoke, and /devices once you are signed in.
+  - The schema, the indexes, codegen, the CLI test suite.
+  - Guest sign-in.
+  Email is one door. The building is not locked.
+
+IF YOU ONLY REMEMBER ONE THING
+  No key, no emailed code - sign in as a guest and carry on. The error names
+  the variable, so it is not a mystery to solve at 2am.
+
+
+===============================================================================
+DEMO NOTES - WHAT TO POINT THE CAMERA AT  (added 2026-11-18, lighter)
+===============================================================================
+
+  Not a specification. Directions for the hardware you actually have, roughly
+  in order of ambition.
+
+THE SHAPE OF THE THING
+  Meboard's honest pitch: one screen, one tablet, one text wire, nothing to
+  install. Latch's honest pitch: a machine with no working screen can still say
+  what it is doing. Demo those together and the story writes itself - the
+  tablet is the only glass in the room, and everything else is a box that
+  reports.
+
+  The constraint is the selling point. Say out loud, once, that nothing here
+  can type on the other machine. Then show a laptop with its screen unplugged
+  reporting its uptime and its last action to the tablet. People understand
+  observe-versus-control instantly when the alternative is implied.
+
+FIVE THINGS THAT WOULD LOOK GOOD
+  1. The graveyard shift. Three or four broken machines, each running
+     `latch listen`, each publishing one line a minute: uptime, free disk, the
+     last thing it logged. The tablet shows the wall of them. Kill one - the
+     process, not the machine - and watch it go grey within 90 seconds.
+     Presence is polling, and that is the demo.
+
+  2. The screenless terminal. The Chromebook's panel is mostly gone. Share its
+     framebuffer to the A9, then type the six characters by hand while someone
+     watches. The whole product in one gesture: the tablet is the screen, the
+     terminal is a thing that reports.
+
+  3. Six characters, three minutes. Put the countdown on screen, wait it out,
+     then try the dead code on camera. It fails, cleanly, with the same message
+     as a mistyped code. Short-lived and single-use is easier to show than to
+     explain.
+
+  4. Revoke as a receipt. Enrol a device, let it poll, revoke it, show the row
+     greyed with its token tail still there. Not a delete - a receipt. A good
+     five-second beat.
+
+  5. The reverse rig. A9 shares its screen, Chromebook watches. Nobody films it
+     because the laptop is the broken one. Do it anyway: same code path, and
+     it proves the direction is a choice.
+
+IF YOU WANT SOMETHING NOVEL
+  - Two piles, one wire. Every device publishes only what it can still do, and
+    the tablet renders "what is left of this house" as a list. Add a machine,
+    remove one, watch the list agree with reality.
+  - A clock that only exists on the bus. One device publishes the time every
+    minute; a second device with no clock of its own reads it and displays it.
+    Trivial, and oddly compelling when the second device's own clock is
+    deliberately wrong.
+  - The 90-second test, filmed. Start the stopwatch when the six characters
+    appear. Enrol, listen, first event on screen. An honest number beats any
+    animation.
+  - Dead-device chorus. Each broken machine has exactly one sensor left
+    working. Together they are one instrument and the tablet is the mix.
+
+WHAT TO AVOID
+  - Do not imply remote control. One slipped "and now it types for me" and the
+    whole thing reads as a weaker VNC.
+  - Do not demo on guest Wi-Fi or across two networks. Meboard has one STUN
+    server and no TURN relay, and a black rectangle is not a demo.
+  - Do not paper over the missing OTP key on camera. Show guest sign-in as the
+    path and say why: this deployment has no gateway key. That is honest, and
+    it is a better story than a magically working email.
+
+MONEY, IF YOU EVER WANT IT
+  One line in the footer - "buy my drugs?" or something less funny - is a
+  product decision rather than a technical one, and it belongs where a demo can
+  point at it without interrupting itself. Nothing of the sort is in the repo
+  today, and no address is invented here: when there is a real Ko-fi or PayPal
+  link, it is one anchor tag and a line of copy. Keep it clear of the screen
+  share.
