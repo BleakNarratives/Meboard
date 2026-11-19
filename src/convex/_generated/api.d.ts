@@ -13,6 +13,7 @@ import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as bus from "../bus.js";
 import type * as http from "../http.js";
 import type * as live from "../live.js";
+import type * as meboard from "../meboard.js";
 import type * as users from "../users.js";
 
 import type {
@@ -27,6 +28,7 @@ declare const fullApi: ApiFromModules<{
   bus: typeof bus;
   http: typeof http;
   live: typeof live;
+  meboard: typeof meboard;
   users: typeof users;
 }>;
 

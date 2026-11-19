@@ -16,6 +16,21 @@ export const roleValidator = v.union(
 );
 export type Role = Infer<typeof roleValidator>;
 
+// A "bit" is anything the user drops on the board. The kind is a closed
+// union, not a string: an open taxonomy becomes a graveyard of one-off
+// tags that nobody remembers the spelling of. Changing this union is a
+// migration (weights and hints are keyed off it), so it lives here next
+// to the table rather than inside the module that happens to write it.
+export const bitKindValidator = v.union(
+  v.literal("idea"),
+  v.literal("file"),
+  v.literal("audio"),
+  v.literal("terminal"),
+  v.literal("agent"),
+  v.literal("other"),
+);
+export type BitKind = Infer<typeof bitKindValidator>;
+
 const schema = defineSchema(
   {
     // default auth tables using convex auth.
@@ -33,6 +48,24 @@ const schema = defineSchema(
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
     // add other tables here
+
+    // ---- Meboard -------------------------------------------------------
+    // One row per bit, always owned by exactly one user. Anonymous guests
+    // are real users in convex auth, so the guest demo path needs no
+    // special case here: they get a userId like anyone else.
+    //
+    // `weight` is the learning signal (0..5) and `raised` is the visual
+    // state. They are deliberately two columns: a bit can be disciplined
+    // down to zero and sink without being deleted, so the board can show
+    // that it fell instead of quietly rewriting history.
+    bits: defineTable({
+      userId: v.id("users"),
+      label: v.string(),
+      kind: bitKindValidator,
+      weight: v.number(),
+      raised: v.boolean(),
+      createdAt: v.number(),
+    }).index("by_user", ["userId", "createdAt"]),
 
     // a live screen-share board. the host captures its own screen and
     // advertises a short join code; one viewer can attach at a time.
