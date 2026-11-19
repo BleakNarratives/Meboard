@@ -1,6 +1,6 @@
 name: rewrite pr body
 
-# One-shot. Scaffold deleted in the next commit.
+# One-shot. Run 2: the body file now exists. Scaffold deleted in the next commit.
 
 on:
   push:
@@ -21,6 +21,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          ls -l .github/pr1-body.md
           gh pr edit 1 --repo BleakNarratives/Meboard --body-file .github/pr1-body.md
           echo "--- first lines now on the PR ---"
           gh pr view 1 --repo BleakNarratives/Meboard --json body -q .body | head -12
