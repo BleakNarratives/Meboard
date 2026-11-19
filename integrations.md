@@ -140,3 +140,52 @@ if (!hasIntegration) {
   console.error("VLY integration key not found");
 }
 ```
+
+---
+
+## Where configuration lives — decision, 2026-11-18
+
+Asked, in one breath: should keys, endpoints and model names go in a YAML or
+TOML file, a `.env`, the event bus, or `RUMORS.md`? Answer: none of them alone,
+and never the same thing in two places.
+
+**Four layers, and they do not merge.**
+
+1. **Secrets** — `VLY_INTEGRATION_KEY`, provider keys, the JWT keypair. Vault or
+   deployment env only, read with `process.env` inside Convex actions, never in
+   the browser and never in a committed file. Local development uses `.env`
+   (gitignored); the deployment gets `npx convex env set`. `STANK.md` §2.5 is
+   what this layer looks like when it is empty: sign-in dies with a named error
+   instead of a mood.
+2. **Deployment wiring** — Convex URLs, site URL, issuer, model allowlist. Env
+   vars with a code default, so a fresh clone runs and a deployment can differ.
+   `VITE_CONVEX_URL` into `use-endpoint.ts` already does this correctly.
+3. **User state** — anything a signed-in person changes at runtime: preferred
+   model, endpoint override. A Convex table with one validated mutation,
+   because it must be per-user, reactive and auditable. `localStorage` stays a
+   per-browser override, never the truth.
+4. **Operator files on a machine** — `~/.latch/config.json`, mode 0600, written
+   only after the token verifies. The CLI's job, not the app's.
+
+**Precedence, once, in this order:** explicit argument, then user state, then
+env, then the baked default. A layer that arrives out of order is a bug nobody
+can reproduce.
+
+**What not to do.**
+
+- No `config.yaml` in the repo that holds keys. A committed config with a secret
+  in it is a leak with a review comment.
+- **The bus is not a config store.** Events are facts about what happened;
+  configuration is desired state. Sending it over `/bus/publish` gives two
+  sources of truth, no validation, and no way to answer "what is the current
+  value". What does belong there is a `config.changed` note after a validated
+  write, so other devices know to re-read: continuity without duplication.
+- **`RUMORS.md` is prose.** The moment code parses it, it is a database with no
+  schema, no migrations, and a file extension that lies.
+- No free-text model names from the client. Allowlist server-side, as the
+  integration template already does.
+
+**When to add the table:** at the second knob, not the first. One setting is a
+constant; two is a schema. Today there is no user-adjustable setting that is not
+already an endpoint override, so this decision costs nothing to hold and will be
+worth having the day someone asks for a model picker.
