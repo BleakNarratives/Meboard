@@ -150,3 +150,53 @@ supposed to be worth reading.
 
 *Chef's kiss returned, with interest. The terminal was fine; the thumbs were the
 hard part.*
+
+---
+
+## Append, 2026-11-18 — Latch, and a second pass over it
+
+Two things happened today: the owner pushed a real deployment, and the agent
+spent the evening making the repo tell the truth about itself.
+
+**The owner did the account-bound half.** `npx convex dev` against
+`bleaknarratives:meboard` / `standing-sockeye-398`: 16 indexes added,
+`Convex functions ready! (13.7s)`. That closes the item open since the branch
+was cut — schema pushed and codegen run. The regenerated `_generated` diff is
+still sitting uncommitted on the tablet.
+
+**The agent did the parts that needed no credentials:**
+
+| Commit | What |
+|---|---|
+| `b338af2` | `emailOtp` refuses before opening a socket when `VLY_INTEGRATION_KEY` is unset — names the variable, the command and the way round it. `MEBOARD_START_HERE.md` rewritten with the four env vars a fresh deployment needs |
+| `6adf6fd` | `MRD.txt` +138 lines: the missing-OTP-key procedure and the demo notes |
+| `c7e4df5` | Environments matrix — Termux verified with its limits, Crostini expected, Windows and macOS untested, two placeholders |
+| `f532542` | `fix/incidental` cut from `main` with only the five unrelated fixes → PR #2 |
+| `54fcddd` | hidden `latch ghost`, typechecked on the runner before it landed |
+| `b8125ee` | `TODO.md` §0 closed and §8 added: every caveat written down instead of said out loud |
+| `f73e551` | `STANK.md`, filed by how much evidence stands behind each claim |
+
+**Read, not just written.** `src/convex/auth.config.ts`, `src/convex/auth.ts`,
+`src/convex/auth/emailOtp.ts`, `src/latch/cli.ts` in full,
+`MEBOARD_START_HERE.md`, `MRD.txt`, `TODO.md`, this file, and the commit and
+pull-request metadata throughout.
+
+**Where the agent was wrong, on the record:**
+
+- Two workflow files were committed with the heredoc body at column zero,
+  which ends a YAML block scalar. GitHub ran nothing, silently, twice. The
+  work only happened on the third attempt, once the text moved into its own
+  file.
+- It first reported the `convex dev` failure as needing a login. The cause was
+  a clone with no `node_modules`; the error (`Could not resolve
+  "convex/server"`) says so once it is read properly.
+- It told the owner that `pkg install bunx` fails because `bunx` is a
+  subcommand of `bun`. True, and the useful half was the next sentence: the
+  device never needed bun in the first place.
+
+**What did not happen, and is recorded in `STANK.md`:** no browser has rendered
+`/devices`; no device has ever enrolled; `install-latch.ps1` has never been
+parsed; `latch:test` is a stub against a local socket, not a deployment. The
+agent also touched nothing outside this repository — it cannot. The copy of
+this file on the Chromebook belongs to a different session with a different
+disk.

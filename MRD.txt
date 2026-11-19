@@ -162,3 +162,305 @@ PRIVACY, IN ONE BREATH
 IF YOU ONLY REMEMBER ONE THING
   Same Wi-Fi, same account, https URL, host picks "Entire screen", viewer types
   the six characters. Everything else is polish.
+
+===============================================================================
+LATCH - RIGGING A DEVICE  (added 2026-11-18)
+===============================================================================
+
+WHAT THIS IS
+  A small program that lives on a machine and keeps a line open to your Meboard
+  account, so that machine can report in without anyone starting a screen share.
+  It is observe only. It reports. It does not type, click, or run anything, and
+  that is a decision rather than a gap. If you ever want it to do more, that is a
+  conversation about consent, not a feature request.
+
+  Why you would want it: the device with the broken screen can tell you it is
+  alive and what it just did, from the tablet, without you opening a laptop.
+
+WHAT YOU NEED
+  - Node 18 or newer on the device that will run it. Check with:
+      node --version
+  - The repo, once, to build and install.
+  - A signed-in Meboard tab on any device you can read, to mint the code.
+
+  Nothing else. No daemon, no service account, no key to copy around.
+
+
+THE 60-SECOND VERSION
+  1. In the repo:
+       bun run latch:build
+       sh scripts/install-latch.sh
+  2. Open /devices, sign in, type a name, press "Get a code".
+     Six characters appear with a three-minute countdown.
+  3. On the device, before the countdown runs out:
+       latch enroll 4K7Q2M
+     (4K7Q2M is an example. Use the code on your screen.)
+  4. Check it took:
+       latch status
+  5. Leave it running and watch it arrive:
+       latch listen
+
+  That is the whole rig. The code is single use. If it expires, press "Get a
+  code" again; there is nothing to reset and nothing to clean up.
+
+
+STEP 1 - BUILD AND INSTALL
+  From the repo root:
+      bun run latch:build
+  That produces one file, dist-latch/latch.mjs, with no dependencies. You can
+  copy that file to any machine with node 18+ and run it directly:
+      node latch.mjs status
+
+  To put it on PATH instead:
+      sh scripts/install-latch.sh
+
+  On Windows, in PowerShell:
+      powershell -ExecutionPolicy Bypass -File scripts\install-latch.ps1
+
+  The installer prints the line to add to PATH if it cannot add it for you. It
+  installs a small shim, not a service; nothing starts on boot yet.
+
+  The endpoint is baked in at build time from VITE_CONVEX_URL. If you built with
+  no environment set, the binary will say it has no endpoint and refuse rather
+  than guess. Rebuild with VITE_CONVEX_URL set in the environment; that is the
+  supported path, and it beats passing --url by hand on every machine.
+
+STEP 2 - MINT A CODE
+  /devices -> name the device -> "Get a code". The code is six characters from
+  an alphabet with no 0/O/1/I/L, so it is hard to misread. It lives three
+  minutes and works once. Case and spaces do not matter; the program normalises
+  what you type.
+
+  Why so short-lived: it is the only credential that crosses a terminal by hand.
+  A code that hangs around is a code somebody else can use.
+
+STEP 3 - ENROL
+      latch enroll 4K7Q2M
+  Success prints "auth ok" and writes ~/.latch/config.json at mode 0600. That
+  file holds the device token. It protects you from other users on the same
+  machine; it does not protect you from backups, Time Machine, OneDrive, or a
+  roaming profile. If that matters, do not enrol that machine, or revoke it when
+  you are done.
+
+  Nothing was written if the code was expired, already used, or mistyped. All
+  three look the same on purpose, and all three mean "get a fresh code".
+
+STEP 4 - WATCH IT ARRIVE
+      latch status     # who am I, which deployment, is the token live
+      latch listen     # follow the log; Ctrl+C to stop
+      latch listen --once    # print what is there now and exit
+
+  /devices should show the device within 90 seconds of the first poll. Presence
+  is a side effect of polling, so a machine that stops polling goes quiet on the
+  page. That is honest: it is not connected.
+
+STEP 5 - REVOKE WHEN DONE
+  /devices -> revoke, next to that device. The token stops working immediately
+  and the others are untouched. The row stays, greyed, with its token tail, so
+  you can tell which machine you killed. Revoking is a receipt, not a delete.
+
+
+ON THE CHROMEBOOK (CROSTINI)
+  Type the six characters at the terminal by hand. That is the intended path,
+  not a workaround.
+
+  Do not try the clipboard shortcut here. ChromeOS blocks programmatic clipboard
+  reads inside the Linux container by design, and the program knows it: --clip is
+  marked Windows/macOS only and is not the front door anywhere.
+
+  If typing six characters here feels bad, that is a design problem worth
+  fixing, not a you problem. Say so.
+
+ON THE TABLET (TERMUX)
+      pkg install nodejs
+  Then the same steps. The open question is whether `latch listen` survives the
+  Android app going to the background; note what happens to polling when it
+  does. Do not assume it stays awake.
+
+
+SUCCESS CHECKLIST
+  [ ] latch status prints "auth ok"
+  [ ] /devices shows the device with the right name and platform
+  [ ] the green dot appears within 90 seconds
+  [ ] revoking it makes the next poll fail with 401
+  [ ] the other devices are still live after that revoke
+
+
+TROUBLESHOOTING
+
+  "no endpoint to enrol against"
+    The binary was built without VITE_CONVEX_URL, so no default was baked in.
+    Rebuild with it set. Do not paper over it with --url on every machine.
+
+  "that endpoint answered HTTP 404"
+    Right deployment name, wrong door. Latch talks to .convex.site, not
+    .convex.cloud. The two hosts serve different things on the same deployment.
+
+  "that code isn't live"
+    Expired, already used, or mistyped - deliberately indistinguishable. Get a
+    fresh code. It is almost always the three-minute window.
+
+  "token rejected" after it worked yesterday
+    Revoked on /devices, or the token belongs to a different deployment than the
+    one you are now pointing at. Revoke and enrol again.
+
+  "command not found: latch"
+    Built but not on PATH. Run it directly with node latch.mjs, or re-run the
+    installer and add the PATH line it prints.
+
+  "Cannot find module dist-latch/latch.mjs"
+    Not built. bun run latch:build.
+
+  The device shows on /devices and then goes grey
+    It stopped polling: the process died, the machine slept, or the tab that was
+    running it closed. Nothing is broken; polling is presence.
+
+
+PRIVACY, IN ONE BREATH
+  The token identifies one device, not the person holding it. It can publish and
+  read that account's log and nothing else, and it dies when you revoke it. What
+  the machine reports is whatever the program sends - today, presence and the
+  events you publish. There is no screen capture and no keystroke logging here.
+
+
+IF YOU ONLY REMEMBER ONE THING
+  Build it, get a six-character code from /devices, type it on the machine
+  within three minutes, then confirm "auth ok". Everything else is polish.
+
+===============================================================================
+WHEN THE OTP KEY IS MISSING  (added 2026-11-18)
+===============================================================================
+
+WHAT THIS IS
+  Email sign-in sends a six-digit code through the freebuff integrations
+  gateway. The gateway needs to know which project is asking, and it knows
+  that by one variable on the deployment: VLY_INTEGRATION_KEY. Without that
+  variable no code can be sent. Nothing is broken and nothing is lost; the one
+  sign-in path that needs an email is simply closed.
+
+  This is the normal state of a deployment created with plain `npx convex dev`.
+  The key is issued when a project is created through freebuff's own flow, not
+  when you run the CLI by hand. Expect it to be missing, and expect the app to
+  say so rather than failing quietly.
+
+WHAT YOU SEE
+  In the app, after asking for a code:
+      Email sign-in is not configured on this deployment: VLY_INTEGRATION_KEY
+      is unset, so no sign-in code can be sent. Set it with `npx convex env set
+      VLY_INTEGRATION_KEY <key>`, or sign in as a guest instead - the bus,
+      /devices and Latch all work without email sign-in.
+
+  From the terminal, the same situation:
+      npx convex env list          # no VLY_INTEGRATION_KEY in the list
+
+  What you do NOT see any more: a bare HTTP 401 from the gateway, or an email
+  that never arrives while the page insists it was sent. The check happens
+  before a socket is opened, because a request that cannot succeed should not
+  be made.
+
+  It is still an error and not a quiet return, on purpose. Convex Auth reports
+  a successful send if the send function resolves, so returning normally would
+  make the UI lie and leave somebody waiting on an email that was never going
+  to come. A clear refusal is the honest failure.
+
+THREE WAYS FORWARD, IN ORDER OF EFFORT
+  1. Do not sign in with email. Guest sign-in is the Anonymous provider in
+     src/convex/auth.ts and is always available. The bus, /devices, pairing,
+     enrolment and Latch all work. For a demo this is the right answer.
+
+  2. Get a key and set it:
+       npx convex env set VLY_INTEGRATION_KEY <key>
+     Reload and ask for a code again. No redeploy needed; Convex picks up env
+     changes on the next request. Treat the key like a password: not in
+     .env.local, not in a commit, not pasted into a chat window.
+
+  3. Point the sender somewhere else, if you run your own gateway:
+       npx convex env set VLY_INTEGRATION_BASE_URL https://your.host
+     It defaults to https://integrations.vly.ai and expects POST
+     /v1/email/otp with {to, otp} and an Authorization: Bearer header.
+
+WHAT THIS DOES NOT BREAK
+  - Latch enrolment, tokens, revoke, and /devices once you are signed in.
+  - The schema, the indexes, codegen, the CLI test suite.
+  - Guest sign-in.
+  Email is one door. The building is not locked.
+
+IF YOU ONLY REMEMBER ONE THING
+  No key, no emailed code - sign in as a guest and carry on. The error names
+  the variable, so it is not a mystery to solve at 2am.
+
+
+===============================================================================
+DEMO NOTES - WHAT TO POINT THE CAMERA AT  (added 2026-11-18, lighter)
+===============================================================================
+
+  Not a specification. Directions for the hardware you actually have, roughly
+  in order of ambition.
+
+THE SHAPE OF THE THING
+  Meboard's honest pitch: one screen, one tablet, one text wire, nothing to
+  install. Latch's honest pitch: a machine with no working screen can still say
+  what it is doing. Demo those together and the story writes itself - the
+  tablet is the only glass in the room, and everything else is a box that
+  reports.
+
+  The constraint is the selling point. Say out loud, once, that nothing here
+  can type on the other machine. Then show a laptop with its screen unplugged
+  reporting its uptime and its last action to the tablet. People understand
+  observe-versus-control instantly when the alternative is implied.
+
+FIVE THINGS THAT WOULD LOOK GOOD
+  1. The graveyard shift. Three or four broken machines, each running
+     `latch listen`, each publishing one line a minute: uptime, free disk, the
+     last thing it logged. The tablet shows the wall of them. Kill one - the
+     process, not the machine - and watch it go grey within 90 seconds.
+     Presence is polling, and that is the demo.
+
+  2. The screenless terminal. The Chromebook's panel is mostly gone. Share its
+     framebuffer to the A9, then type the six characters by hand while someone
+     watches. The whole product in one gesture: the tablet is the screen, the
+     terminal is a thing that reports.
+
+  3. Six characters, three minutes. Put the countdown on screen, wait it out,
+     then try the dead code on camera. It fails, cleanly, with the same message
+     as a mistyped code. Short-lived and single-use is easier to show than to
+     explain.
+
+  4. Revoke as a receipt. Enrol a device, let it poll, revoke it, show the row
+     greyed with its token tail still there. Not a delete - a receipt. A good
+     five-second beat.
+
+  5. The reverse rig. A9 shares its screen, Chromebook watches. Nobody films it
+     because the laptop is the broken one. Do it anyway: same code path, and
+     it proves the direction is a choice.
+
+IF YOU WANT SOMETHING NOVEL
+  - Two piles, one wire. Every device publishes only what it can still do, and
+    the tablet renders "what is left of this house" as a list. Add a machine,
+    remove one, watch the list agree with reality.
+  - A clock that only exists on the bus. One device publishes the time every
+    minute; a second device with no clock of its own reads it and displays it.
+    Trivial, and oddly compelling when the second device's own clock is
+    deliberately wrong.
+  - The 90-second test, filmed. Start the stopwatch when the six characters
+    appear. Enrol, listen, first event on screen. An honest number beats any
+    animation.
+  - Dead-device chorus. Each broken machine has exactly one sensor left
+    working. Together they are one instrument and the tablet is the mix.
+
+WHAT TO AVOID
+  - Do not imply remote control. One slipped "and now it types for me" and the
+    whole thing reads as a weaker VNC.
+  - Do not demo on guest Wi-Fi or across two networks. Meboard has one STUN
+    server and no TURN relay, and a black rectangle is not a demo.
+  - Do not paper over the missing OTP key on camera. Show guest sign-in as the
+    path and say why: this deployment has no gateway key. That is honest, and
+    it is a better story than a magically working email.
+
+MONEY, IF YOU EVER WANT IT
+  One line in the footer - "buy my drugs?" or something less funny - is a
+  product decision rather than a technical one, and it belongs where a demo can
+  point at it without interrupting itself. Nothing of the sort is in the repo
+  today, and no address is invented here: when there is a real Ko-fi or PayPal
+  link, it is one anchor tag and a line of copy. Keep it clear of the screen
+  share.

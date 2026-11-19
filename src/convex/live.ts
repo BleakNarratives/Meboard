@@ -14,8 +14,11 @@ const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
  *
  * Rejection sampling keeps the distribution flat: taking `byte % 31` directly
  * would make the first eight letters 12.5% more likely than the rest.
+ *
+ * Exported so pairing codes reuse this generator rather than growing a second
+ * one that drifts: both are six-or-more characters from the same alphabet.
  */
-function randomCode(length: number) {
+export function randomCode(length: number) {
   const limit = Math.floor(256 / ALPHABET.length) * ALPHABET.length;
   let out = "";
   while (out.length < length) {

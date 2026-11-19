@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
+import { useEndpoint } from "@/hooks/use-endpoint";
 
 /**
  * The human end of the turd-merger wire.
@@ -25,10 +26,7 @@ export function BusPanel() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const siteUrl = String(import.meta.env.VITE_CONVEX_URL ?? "").replace(
-    ".convex.cloud",
-    ".convex.site",
-  );
+  const { siteUrl, setOverride, isDefault } = useEndpoint();
 
   const publishCurl = [
     `curl -s -X POST "${siteUrl}/bus/publish" \\`,
@@ -146,6 +144,50 @@ export function BusPanel() {
           <p className="mt-1 text-xs text-muted-foreground">
             Anyone holding this can write to the log. Rotate if it gets loose.
           </p>
+
+          <div className="mt-4">
+            <label
+              htmlFor="bus-endpoint"
+              className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground"
+            >
+              Endpoint for copied commands
+            </label>
+            <Input
+              id="bus-endpoint"
+              // Remount when the value changes elsewhere (e.g. Reset), so the
+              // field is always showing what the commands below will use.
+              key={siteUrl}
+              defaultValue={siteUrl}
+              onBlur={(event) => setOverride(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  event.currentTarget.blur();
+                }
+              }}
+              spellCheck={false}
+              autoComplete="off"
+              aria-describedby="bus-endpoint-hint"
+              className="mt-1 font-mono text-xs"
+            />
+            <p
+              id="bus-endpoint-hint"
+              className="mt-1 text-xs text-muted-foreground"
+            >
+              {isDefault
+                ? "This deployment. Change it to copy commands for another one."
+                : "Overriding — the snippets below point at this instead."}
+              {isDefault ? null : (
+                <button
+                  type="button"
+                  onClick={() => setOverride("")}
+                  className="ml-2 cursor-pointer underline underline-offset-2 hover:text-foreground"
+                >
+                  Reset
+                </button>
+              )}
+            </p>
+          </div>
 
           <div className="mt-4 space-y-3">
             <div>

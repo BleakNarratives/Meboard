@@ -10,6 +10,9 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# the latch CLI bundle: a build output, but not one vite owns — `vite build`
+# empties dist/ and would take the installed CLI with it
+dist-latch
 *.local
 
 # Editor directories and files
